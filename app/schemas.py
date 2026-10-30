@@ -114,6 +114,18 @@ class TriageResponse(BaseModel):
     reasons: List[str] = Field(default_factory=list, description="Reasoning steps and triggers")
     processing_time_ms: float = 0.0
     cost_usd: float = 0.0
+    # --- New AI feature fields ---
+    intent: Optional[str] = Field(default=None, description="Detected player intent")
+    intent_label: Optional[str] = Field(default=None, description="Human-readable intent label")
+    intent_confidence: Optional[float] = Field(default=None, description="Intent detection confidence")
+    requires_admin: Optional[bool] = Field(default=None, description="Whether intent requires live admin")
+    fraud_risk_score: int = Field(default=0, ge=0, le=100, description="Fraud/fake report risk score 0-100")
+    fraud_risk_level: Optional[str] = Field(default=None, description="Risk level: minimal/low/medium/high")
+    fraud_reasons: List[str] = Field(default_factory=list, description="Fraud risk reasons")
+    fraud_related_tickets: List[Dict[str, Any]] = Field(default_factory=list, description="Related tickets for fraud check")
+    admin_request_id: Optional[str] = Field(default=None, description="Admin call request ID if player asked for admin")
+    player_history: Optional[Dict[str, Any]] = Field(default=None, description="Offender history card")
+    ai_summary: Optional[Dict[str, Any]] = Field(default=None, description="Admin Copilot summary for operator")
 
 
 class EscalateRequest(BaseModel):
@@ -132,3 +144,48 @@ class HealthResponse(BaseModel):
     classifier_trained: bool
     using_synthetic_data: bool
     llm_enabled: bool
+
+
+# ---- Admin Request Schemas ----
+
+class AdminRequestCreate(BaseModel):
+    """Player explicitly requests a live admin."""
+    ticket_id: Optional[str] = None
+    player_nickname: Optional[str] = None
+    server: Optional[Union[int, str]] = None
+    language: str = "ru"
+    context_messages: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class AdminRequestAction(BaseModel):
+    """Admin takes action on an admin request."""
+    request_id: str
+    admin_id: str = Field(..., description="Admin's user ID")
+    admin_name: str = Field(..., description="Admin's display name")
+    note: Optional[str] = None
+
+
+# ---- Feedback Schemas ----
+
+class FeedbackSubmit(BaseModel):
+    ticket_id: str
+    admin_id: str
+    admin_name: str
+    feedback_type: str = Field(
+        default="correct_classification",
+        description="One of: correct_classification, wrong_category, wrong_priority, wrong_rule, wrong_evidence_analysis, wrong_confidence, intent_mismatch"
+    )
+    ai_category: str
+    correct_category: Optional[str] = None
+    ai_priority: str
+    correct_priority: Optional[str] = None
+    ai_rule_ids: List[str] = Field(default_factory=list)
+    correct_rule_ids: Optional[List[str]] = None
+    note: Optional[str] = None
+
+
+# ---- Player History Schema ----
+
+class PlayerHistoryQuery(BaseModel):
+    nickname: str
+    include_demo: bool = True

@@ -13,7 +13,7 @@ import logging
 import os
 from pathlib import Path
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -21,9 +21,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.config import settings
-from app.schemas import EscalateRequest, HealthResponse, TriageRequest, TriageResponse
+from app.schemas import (
+    AdminRequestAction,
+    AdminRequestCreate,
+    EscalateRequest,
+    FeedbackSubmit,
+    HealthResponse,
+    PlayerHistoryQuery,
+    TriageRequest,
+    TriageResponse,
+)
 from app.triage import TriageService
 from app.workspace import LABEL_KEYS, WorkspaceStore, create_router
+from app.admin_requests import admin_request_store, STATUS_WAITING
+from app.fraud_detector import fraud_detector
+from app.player_history import player_history_store
+from app.feedback import feedback_store
 
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
@@ -209,4 +222,152 @@ async def operator_dashboard() -> HTMLResponse:
     if not html_path.exists():
         raise HTTPException(status_code=404, detail="Operator UI file not found")
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+
+
+# ============================================================
+# Admin Requests — live admin call management
+# ============================================================
+
+@app.post("/api/admin-requests", tags=["Admin Requests"])
+async def create_admin_request(payload: AdminRequestCreate) -> Dict[str, Any]:
+    """
+    Player explicitly requests a live human admin.
+    Creates an admin request entry with WAITING status.
+    """
+    ar = admin_request_store.create(
+        player_nickname=payload.player_nickname,
+        server=payload.server,
+        context_messages=payload.context_messages,
+        ticket_id=payload.ticket_id,
+        language=payload.language,
+    )
+    logger.info("admin_request_created_api id=%s player=%s", ar["id"], payload.player_nickname)
+    return {"status": "created", "admin_request": ar}
+
+
+@app.get("/api/admin-requests", tags=["Admin Requests"])
+async def list_admin_requests(
+    status: Optional[str] = None,
+    limit: int = 50,
+) -> Dict[str, Any]:
+    """List all admin requests. Optionally filter by status."""
+    requests = admin_request_store.list_requests(status=status, limit=limit)
+    return {
+        "count": len(requests),
+        "waiting_count": admin_request_store.get_waiting_count(),
+        "stats": admin_request_store.get_stats(),
+        "requests": requests,
+    }
+
+
+@app.post("/api/admin-requests/{request_id}/accept", tags=["Admin Requests"])
+async def accept_admin_request(request_id: str, action: AdminRequestAction) -> Dict[str, Any]:
+    """Admin accepts a waiting admin request."""
+    result = admin_request_store.accept(
+        request_id=request_id,
+        admin_id=action.admin_id,
+        admin_name=action.admin_name,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Admin request {request_id!r} not found")
+    return {"status": "accepted", "admin_request": result}
+
+
+@app.post("/api/admin-requests/{request_id}/complete", tags=["Admin Requests"])
+async def complete_admin_request(request_id: str, action: AdminRequestAction) -> Dict[str, Any]:
+    """Admin marks a request as completed."""
+    result = admin_request_store.complete(
+        request_id=request_id,
+        admin_id=action.admin_id,
+        admin_name=action.admin_name,
+        note=action.note,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Admin request {request_id!r} not found")
+    return {"status": "completed", "admin_request": result}
+
+
+@app.post("/api/admin-requests/{request_id}/cancel", tags=["Admin Requests"])
+async def cancel_admin_request(request_id: str) -> Dict[str, Any]:
+    """Cancel an admin request (by player)."""
+    result = admin_request_store.cancel(request_id=request_id, requester="player")
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Admin request {request_id!r} not found")
+    return {"status": "cancelled", "admin_request": result}
+
+
+# ============================================================
+# Fraud Detection — statistics and reporting
+# ============================================================
+
+@app.get("/api/fraud/stats", tags=["Fraud Detection"])
+async def get_fraud_stats() -> Dict[str, Any]:
+    """Return fraud detection statistics and top suspicious reporters/offenders."""
+    return {
+        "stats": fraud_detector.get_statistics(),
+        "top_reporters": fraud_detector.get_top_reporters(limit=5),
+        "top_offenders": fraud_detector.get_top_offenders(limit=5),
+        "disclaimer": "Данные носят аналитический характер. Решения принимает администратор.",
+    }
+
+
+# ============================================================
+# Player History — offender profile cards
+# ============================================================
+
+@app.get("/api/player-history/{nickname}", tags=["Player History"])
+async def get_player_history(nickname: str) -> Dict[str, Any]:
+    """Get violation history card for a player nickname."""
+    history = player_history_store.get_player_history(nickname)
+    if not history:
+        return {"found": False, "nickname": nickname}
+    return history
+
+
+@app.get("/api/repeat-offenders", tags=["Player History"])
+async def get_repeat_offenders(min_complaints: int = 3, limit: int = 10) -> Dict[str, Any]:
+    """Get list of repeat offenders for admin dashboard."""
+    offenders = player_history_store.get_repeat_offenders(min_complaints=min_complaints, limit=limit)
+    return {
+        "count": len(offenders),
+        "offenders": offenders,
+        "disclaimer": "Жалобы не являются доказательством вины. Показаны только подтверждённые нарушения.",
+    }
+
+
+# ============================================================
+# Feedback Loop — admin corrections for AI quality
+# ============================================================
+
+@app.post("/api/feedback", tags=["Feedback"])
+async def submit_feedback(payload: FeedbackSubmit) -> Dict[str, Any]:
+    """Submit admin feedback on an AI triage decision for quality improvement."""
+    entry = feedback_store.record(
+        ticket_id=payload.ticket_id,
+        admin_id=payload.admin_id,
+        admin_name=payload.admin_name,
+        feedback_type=payload.feedback_type,
+        ai_category=payload.ai_category,
+        correct_category=payload.correct_category,
+        ai_priority=payload.ai_priority,
+        correct_priority=payload.correct_priority,
+        ai_rule_ids=payload.ai_rule_ids,
+        correct_rule_ids=payload.correct_rule_ids,
+        note=payload.note,
+    )
+    logger.info("feedback_submitted ticket=%s type=%s admin=%s", payload.ticket_id, payload.feedback_type, payload.admin_name)
+    return {"status": "recorded", "feedback_id": entry["id"], "feedback": entry}
+
+
+@app.get("/api/feedback/stats", tags=["Feedback"])
+async def get_feedback_stats() -> Dict[str, Any]:
+    """Return AI feedback quality statistics including accuracy rate."""
+    return feedback_store.get_stats()
+
+
+@app.get("/api/feedback", tags=["Feedback"])
+async def list_feedback(limit: int = 50) -> Dict[str, Any]:
+    """List all recorded feedback entries."""
+    items = feedback_store.list_all(limit=limit)
+    return {"count": len(items), "feedback": items}
 

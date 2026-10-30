@@ -1,6 +1,7 @@
 """
 End-to-end Triage Service orchestrating extraction, classification, RAG over rules,
-safety verification, and privacy-preserving analytics.
+intent recognition, fraud detection, admin call handling, player history lookup,
+AI admin copilot summaries, safety verification, and privacy-preserving analytics.
 """
 import logging
 import time
@@ -14,6 +15,11 @@ from app.generator import DraftGenerator, LLMClient
 from app.rag import RulesRAGEngine
 from app.safety import SafetyGuard
 from app.schemas import CitedRule, TriageRequest, TriageResponse
+from app.intent_recognizer import detect_intent, INTENT_LABELS, INTENT_REQUIRES_ADMIN
+from app.fraud_detector import fraud_detector
+from app.admin_requests import admin_request_store
+from app.player_history import player_history_store
+from app.admin_copilot import AdminCopilot
 
 logger = logging.getLogger("grand_mobile_copilot")
 
@@ -63,6 +69,12 @@ class TriageService:
         record_cache: bool = True,
     ) -> TriageResponse:
         start_ts = time.perf_counter()
+        # Lazily init AdminCopilot (needs fully-loaded rag + taxonomy)
+        if not hasattr(self, "_copilot"):
+            self._copilot = AdminCopilot(
+                rules_by_id=self.rag.rules_by_id,
+                taxonomy_categories=self.taxonomy.categories,
+            )
         reasons: List[str] = []
 
         ticket_id = str(request.id or request.ticket_id or f"tkt_{uuid.uuid4().hex[:8]}")
@@ -185,7 +197,84 @@ class TriageService:
         if needs_human and needs_human_reason:
             reasons.append(f"Требуется оператор: {needs_human_reason}")
 
-        # 6. Generate Safe Grounded Draft Response
+        # 6. Intent Recognition
+        intent, intent_conf, intent_signals = detect_intent(
+            text=combined_player_text,
+            category_hint=category,
+        )
+        intent_label = INTENT_LABELS.get(intent, intent)
+        requires_admin = INTENT_REQUIRES_ADMIN.get(intent, False)
+        if intent_signals:
+            reasons.append(f"Намерение игрока: {intent_label} (уверенность {int(intent_conf*100)}%)")
+
+        # 7. Fraud / Anti-fake Detection
+        reporter_nick = facts.reporter_nickname or (request.nickname if request.nickname else None)
+        offender_nick = facts.offender_nickname or (request.offender_nickname if request.offender_nickname else None)
+        total_atts = sum(m.attachments_count for m in request.messages)
+        fraud_result = fraud_detector.analyze(
+            ticket_id=ticket_id,
+            reporter=reporter_nick,
+            offender=offender_nick,
+            text=combined_player_text,
+            category=category,
+            confidence=confidence,
+            has_evidence=facts.has_evidence,
+            attachments_count=total_atts,
+            server=request.server,
+        )
+        # Record in detector store for future cross-checks
+        fraud_detector.record_complaint(
+            ticket_id=ticket_id,
+            reporter=reporter_nick,
+            offender=offender_nick,
+            text=combined_player_text,
+            category=category,
+            server=request.server,
+        )
+        if fraud_result["is_suspicious"] and not is_spam:
+            reasons.append(
+                f"⚠️ Fraud Risk Score: {fraud_result['fraud_risk_score']}/100 ({fraud_result['risk_label']}). "
+                f"Требует ручной проверки. Не является доказательством вины."
+            )
+            needs_human = True
+            if not needs_human_reason:
+                needs_human_reason = "Обнаружены подозрительные паттерны жалобы — требуется ревью администратором"
+
+        # 8. Player (Offender) History
+        offender_history = None
+        if offender_nick:
+            offender_history = player_history_store.get_player_history(offender_nick)
+            player_history_store.record_complaint_against(
+                offender_nickname=offender_nick,
+                ticket_id=ticket_id,
+                category=category,
+            )
+            if offender_history and offender_history.get("found") and offender_history.get("risk_level") in ("high", "critical"):
+                reasons.append(
+                    f"🔁 Повторный нарушитель: {offender_nick!r} (риск: {offender_history['risk_level']}, "
+                    f"жалоб: {offender_history.get('total_complaints', 0)})"
+                )
+
+        # 9. Admin Request Handling (player explicitly called for admin)
+        admin_request_id = None
+        if intent == "admin_request" or requires_admin:
+            existing_msgs = [m.dict() for m in request.messages]
+            ar = admin_request_store.create(
+                player_nickname=reporter_nick,
+                server=request.server,
+                context_messages=existing_msgs,
+                ticket_id=ticket_id,
+                language=language,
+            )
+            admin_request_id = ar["id"]
+            reasons.append(
+                f"👤 Игрок запросил живого администратора → создан запрос {admin_request_id}"
+            )
+            needs_human = True
+            if not needs_human_reason:
+                needs_human_reason = "Игрок явно запросил помощь живого администратора"
+
+        # 10. Generate Safe Grounded Draft Response
         draft_response, cost_usd = self.generator.generate_draft(
             language=language,
             category=category,
@@ -210,6 +299,21 @@ class TriageService:
             needs_human = True
             if not needs_human_reason:
                 needs_human_reason = "Черновик требует ручной проверки безопасности оператором"
+
+        # 11. AI Admin Copilot Summary
+        ai_summary = self._copilot.generate_summary(
+            ticket_id=ticket_id,
+            original_text=combined_player_text,
+            language=language,
+            category=category,
+            priority=priority,
+            confidence=confidence,
+            facts=facts.dict(),
+            cited_rules=[r.dict() for r in cited_rules],
+            needs_human_reason=needs_human_reason,
+            fraud_risk_score=fraud_result["fraud_risk_score"],
+            intent=intent,
+        )
 
         elapsed_ms = round((time.perf_counter() - start_ts) * 1000.0, 2)
 
@@ -259,6 +363,18 @@ class TriageService:
             reasons=reasons,
             processing_time_ms=elapsed_ms,
             cost_usd=cost_usd,
+            # New AI feature fields
+            intent=intent,
+            intent_label=intent_label,
+            intent_confidence=round(intent_conf, 3),
+            requires_admin=requires_admin,
+            fraud_risk_score=fraud_result["fraud_risk_score"],
+            fraud_risk_level=fraud_result["risk_level"],
+            fraud_reasons=fraud_result["reasons"],
+            fraud_related_tickets=fraud_result.get("related_tickets", []),
+            admin_request_id=admin_request_id,
+            player_history=offender_history,
+            ai_summary=ai_summary,
         )
 
     def _evaluate_human_escalation(
