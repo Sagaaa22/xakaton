@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Grand Mobile Support Copilot — Админ-панель</title>
+<style>
+:root{
+  --bg:#0b0f17;--surface:#111827;--card:#172033;--card2:#1d2840;--hover:#22304d;--border:#2a364f;
+  --text:#f1f5f9;--text2:#a5b0c2;--muted:#748098;--accent:#6366f1;--accent2:#4f46e5;
+  --ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--crit:#ec4899;--info:#3b82f6;
+  --radius:10px;--focus:0 0 0 3px rgba(99,102,241,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+a{color:#a5b4fc;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:none;box-shadow:var(--focus);border-radius:6px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* Layout */
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto auto 1fr;min-height:100vh}
+.topbar{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
+.demo-strip{grid-column:1/3;background:rgba(245,158,11,.12);border-bottom:1px solid rgba(245,158,11,.35);color:#fcd34d;font-size:.82rem;padding:5px 20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:grid;place-items:center;font-weight:800;color:#fff}
+.brand small{display:block;font-weight:400;color:var(--text2);font-size:.75rem}
+.topbar .spacer{flex:1}
+.userbox{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text2)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:12px 10px;display:flex;flex-direction:column;gap:2px}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--text2);font-size:.92rem}
+.nav-link:hover{background:var(--card);color:var(--text)}
+.nav-link.active{background:rgba(99,102,241,.16);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
+.nav-link .count{margin-left:auto;background:var(--card2);border-radius:999px;padding:0 8px;font-size:.75rem;color:var(--text)}
+.nav-link .count.hot{background:rgba(239,68,68,.25);color:#fecaca}
+.nav-link .lock{margin-left:auto;font-size:.72rem;color:var(--muted)}
+.nav-sep{height:1px;background:var(--border);margin:8px 4px}
+.main{padding:18px 22px;min-width:0;overflow:auto}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.page-head h1{font-size:1.35rem}
+.page-head p{color:var(--text2);font-size:.88rem}
+svg.i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Controls */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:.86rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:var(--hover)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover:not(:disabled){background:var(--accent2)}
+.btn.ok{background:rgba(16,185,129,.18);border-color:rgba(16,185,129,.5);color:#6ee7b7}
+.btn.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.5);color:#fca5a5}
+.btn.warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.45);color:#fcd34d}
+.btn.sm{padding:4px 9px;font-size:.8rem}
+.input,.select,.textarea{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;min-width:0}
+.textarea{width:100%;resize:vertical;line-height:1.5}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.filters .input{flex:1 1 220px}
+.kbd{font-family:monospace;font-size:.72rem;border:1px solid var(--border);border-radius:4px;padding:0 5px;color:var(--muted)}
+
+/* Badges */
+.b{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:6px;font-size:.76rem;font-weight:600;border:1px solid transparent;white-space:nowrap}
+.p-critical{background:rgba(236,72,153,.18);color:#f9a8d4;border-color:rgba(236,72,153,.45)}
+.p-high{background:rgba(239,68,68,.18);color:#fca5a5;border-color:rgba(239,68,68,.45)}
+.p-medium{background:rgba(245,158,11,.16);color:#fcd34d;border-color:rgba(245,158,11,.4)}
+.p-low{background:rgba(16,185,129,.15);color:#6ee7b7;border-color:rgba(16,185,129,.4)}
+.s-new{background:rgba(59,130,246,.18);color:#93c5fd}
+.s-in_progress{background:rgba(99,102,241,.2);color:#c7d2fe}
+.s-awaiting_player{background:rgba(148,163,184,.18);color:#cbd5e1}
+.s-escalated{background:rgba(239,68,68,.2);color:#fecaca}
+.s-returned{background:rgba(245,158,11,.2);color:#fde68a}
+.s-resolved{background:rgba(16,185,129,.18);color:#a7f3d0}
+.s-closed{background:rgba(100,116,139,.25);color:#cbd5e1}
+.b-lang{background:rgba(59,130,246,.14);color:#93c5fd;text-transform:uppercase}
+.b-cat{background:rgba(139,92,246,.15);color:#ddd6fe}
+.b-human{background:rgba(239,68,68,.18);color:#fecaca;border-color:rgba(239,68,68,.45)}
+.b-auto{background:rgba(16,185,129,.15);color:#a7f3d0}
+.b-muted{background:var(--card2);color:var(--text2)}
+
+/* Cards & grids */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.card h2,.card h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:default}
+.stat a{display:block;color:inherit}
+.stat .v{font-size:1.7rem;font-weight:700}
+.stat .l{color:var(--text2);font-size:.8rem}
+.stat.hot{border-color:rgba(239,68,68,.5)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.kv div{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+.kv span{display:block;font-size:.72rem;color:var(--muted)}
+.kv b{font-size:.86rem;font-weight:600;word-break:break-word}
+.muted{color:var(--text2)}
+.small{font-size:.8rem}
+
+/* Split view */
+.split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(380px,1fr);gap:14px;align-items:start}
+.detail{position:sticky;top:0;max-height:calc(100vh - 150px);overflow:auto}
+
+/* Table */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+caption{text-align:left;padding:10px 12px;color:var(--text2);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+th{position:sticky;top:0;background:var(--card2);text-align:left;font-weight:600;color:var(--text2);padding:0;border-bottom:1px solid var(--border);white-space:nowrap}
+th button{background:none;border:0;padding:9px 10px;width:100%;text-align:left;cursor:pointer;color:inherit;font-weight:600}
+th span.th{display:block;padding:9px 10px}
+td{padding:8px 10px;border-bottom:1px solid rgba(42,54,79,.6);vertical-align:top}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--hover)}
+tbody tr.sel{background:rgba(99,102,241,.14);box-shadow:inset 3px 0 0 var(--accent)}
+td.id{font-family:monospace;color:#c7d2fe;white-space:nowrap}
+.snip{color:var(--muted);font-size:.78rem;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;max-width:340px}
+
+/* Ticket detail */
+.t-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+.t-head h2{font-size:1.05rem;font-family:monospace;margin-right:6px;text-transform:none;color:var(--text)}
+.banner{border-radius:var(--radius);padding:10px 14px;font-size:.86rem}
+.banner.human{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.45)}
+.banner.auto{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4)}
+.banner.info{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.4)}
+.banner.warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.45)}
+.banner b{display:block;margin-bottom:2px}
+.msg{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px}
+.msg.admin{border-left:3px solid var(--accent)}
+.msg .meta{display:flex;justify-content:space-between;font-size:.74rem;color:var(--muted);margin-bottom:4px}
+.msg .tx{white-space:pre-wrap;font-size:.9rem}
+.rule{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:9px 12px}
+.rule .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.rule .rid{background:var(--accent);color:#fff;font-weight:700;font-size:.76rem;padding:1px 8px;border-radius:5px}
+.rule q{display:block;font-style:italic;color:var(--text2);font-size:.83rem;margin:4px 0;quotes:"«" "»"}
+.rule .pun{font-size:.76rem;color:#fcd34d}
+.ver-ok{color:#6ee7b7;font-size:.76rem;font-weight:600}
+.ver-bad{color:#fca5a5;font-size:.76rem;font-weight:600}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.timeline{list-style:none;display:flex;flex-direction:column;gap:6px;font-size:.82rem}
+.timeline li{border-left:2px solid var(--border);padding:2px 0 2px 10px}
+.timeline .when{color:var(--muted);font-size:.74rem}
+details summary{cursor:pointer;color:var(--text2);font-size:.85rem}
+ul.reasons{padding-left:18px;font-size:.82rem;color:var(--text2);display:flex;flex-direction:column;gap:3px;margin-top:6px}
+
+/* States */
+.empty{padding:28px;text-align:center;color:var(--text2);font-size:.9rem}
+.err{padding:14px;border-radius:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.45);color:#fecaca;font-size:.88rem}
+.spinner{width:22px;height:22px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skel{height:14px;border-radius:6px;background:linear-gradient(90deg,var(--card2),var(--hover),var(--card2));background-size:200% 100%;animation:sk 1.2s infinite;margin:8px 0}
+@keyframes sk{to{background-position:-200% 0}}
+
+/* Bars */
+.bar-row{display:grid;grid-template-columns:190px 1fr 46px;gap:8px;align-items:center;font-size:.8rem;margin:4px 0}
+.bar-row .tr{height:7px;background:var(--bg);border-radius:999px;overflow:hidden}
+.bar-row .fl{height:100%;background:var(--accent)}
+.bar-row .nm{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Modal & toast */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:600px;max-height:90vh;overflow:auto;padding:20px}
+.modal h3{font-size:1.05rem;margin-bottom:12px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.8rem;color:var(--text2);margin-bottom:4px;font-weight:600}
+.field .input,.field .select{width:100%}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.86rem;margin:6px 0}
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:60}
+.toast{background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--ok);border-radius:8px;padding:10px 14px;font-size:.86rem;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.toast.error{border-left-color:var(--bad)}
+.toast.warn{border-left-color:var(--warn)}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:.85rem}
+.tab[aria-selected="true"]{background:rgba(99,102,241,.2);border-color:var(--accent);color:#fff}
+
+@media (max-width:1180px){.split{grid-template-columns:1fr}.detail{position:static;max-height:none}}
+@media (max-width:860px){
+  .app{grid-template-columns:1fr}
+  .sidebar{grid-column:1;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--border)}
+  .nav-link{white-space:nowrap}.nav-sep{display:none}
+  .grid2{grid-template-columns:1fr}
+  .topbar{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="logo" aria-hidden="true">GM</div><div>Grand Mobile Support Copilot<small>Админ-панель поддержки · триаж, правила, черновики</small></div></div>
+    <div class="spacer"></div>
+    <div class="userbox">
+      <label for="userSelect">Пользователь (demo):</label>
+      <select id="userSelect" class="select" aria-describedby="demoNotice"></select>
+      <span id="roleBadge" class="b b-muted"></span>
+    </div>
+  </header>
+  <div class="demo-strip" id="demoNotice" role="note">
+    DEMO MODE: роль выбирается переключателем без аутентификации. Права проверяются на backend по серверной таблице ролей,
+    но это не безопасная авторизация — подключение к серверам Grand Mobile не выполняется, используются локальные данные.
+  </div>
+
+  <nav class="sidebar" aria-label="Основное меню" id="sidebar"></nav>
+
+  <main class="main" id="main" tabindex="-1"></main>
+</div>
+
+<div class="modal-bg" id="modalBg" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <form class="modal" id="modalForm">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div id="modalErr"></div>
+    <div class="actions" style="justify-content:flex-end;margin-top:14px">
+      <button type="button" class="btn" id="modalCancel">Отмена</button>
+      <button type="submit" class="btn primary" id="modalSubmit">OK</button>
+    </div>
+  </form>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+/* ===================== Utilities ===================== */
+const ICONS = {
+  overview:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
+  mine:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/>',
+  queue:'<path d="M4 6h16M4 12h16M4 18h10"/>',
+  junior:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 20V10"/>',
+  senior:'<path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3L12 16.6 6.5 19.5l1-6.3L3 8.9 9 8z"/>',
+  assistant:'<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3"/>',
+  rules:'<path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path d="M8 8h8M8 12h8"/>',
+  analytics:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  audit:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.8-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.8 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 10h0a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  check:'<path d="M5 12l5 5L20 7"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  up:'<path d="M12 19V5M5 12l7-7 7 7"/>', alert:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  refresh:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>', send:'<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>',
+  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+  hand:'<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8a8 8 0 0 0 16 0v-3a2 2 0 0 0-4 0"/>',
+  ask:'<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'
+};
+const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const $ = (sel, root=document) => root.querySelector(sel);
+const fmtTime = (iso) => { if(!iso) return '—'; const d=new Date(iso); return d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); };
+const LANGS = {ru:'Русский',kk:'Казахский',uz:'Узбекский',en:'Английский',und:'Не определён'};
+const PRIO = {critical:'Критический',high:'Высокий',medium:'Средний',low:'Низкий'};
+const ACTION_NAMES = {
+  ticket_imported:'Импорт тикета', take:'Взял в работу', assign:'Переназначил', retriage:'Перезапустил анализ ИИ',
+  save_draft:'Сохранил черновик', request_info:'Запросил данные у игрока', send_reply:'Отправил ответ', escalate:'Передал старшему',
+  approve:'Одобрил решение', return:'Вернул на доработку', close:'Закрыл', assistant_saved:'Сохранил результат AI Assistant',
+  settings_changed:'Изменил настройки', demo_reset:'Сбросил демо-данные'
+};
+const prioB = (p) => `<span class="b p-${esc(p)}">${esc(PRIO[p]||p)}</span>`;
+const statusB = (s, label) => `<span class="b s-${esc(s)}">${esc(label || (S.meta && S.meta.statuses[s]) || s)}</span>`;
+const langB = (l) => `<span class="b b-lang" title="${esc(LANGS[l]||l)}">${esc(l)}</span>`;
+const catName = (id) => { const c = S.meta && S.meta.categories.find(x=>x.id===id); return c ? c.name : id; };
+
+const S = { userId: localStorage.getItem('gm_demo_user') || 'junior_1', user:null, users:[], meta:null, selectedId:null, list:{sort:'created_at',order:'desc'}, assistant:{result:null, mode:'text'} };
+
+async function api(method, path, body){
+  let res;
+  try{
+    res = await fetch(path,{method,headers:{'Content-Type':'application/json','X-Demo-User':S.userId},body: body!==undefined?JSON.stringify(body):undefined});
+  }catch(e){ const err=new Error('API недоступно: '+e.message); err.status=0; throw err; }
+  let data=null; try{ data = await res.json(); }catch(_){}
+  if(!res.ok){
+    const d = data && data.detail;
+    const msg = (d && d.message) || (data && data.message) || (typeof d==='string'?d:'') || ('Ошибка '+res.status);
+    const err = new Error(msg); err.status=res.status; err.data=(d && typeof d==='object')?d:data; throw err;
+  }
+  return data;
+}
+
+function toast(msg, type='ok'){
+  const el=document.createElement('div'); el.className='toast '+(type==='ok'?'':type); el.textContent=msg;
+  $('#toasts').appendChild(el); setTimeout(()=>el.remove(), type==='error'?6500:3500);
+}
+function errBox(e){ return `<div class="err" role="alert">${ic('alert')} ${e.status===403?'<b>Доступ запрещён (403).</b> ':''}${esc(e.message)}</div>`; }
+const loadingHTML = (t='Загрузка…') => `<div class="empty"><span class="spinner"></span> ${esc(t)}</div>`;
+
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); toast('Ответ скопирован в буфер обмена'); }
+  catch(_){ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast('Ответ скопирован');}catch(e){toast('Не удалось скопировать','error');} ta.remove(); }
+}
+
+/* ===================== Modal ===================== */
+let modalHandler=null, modalReturnFocus=null;
+function openModal({title, body, submit='Подтвердить', kind='primary', onSubmit}){
+  modalReturnFocus=document.activeElement;
+  $('#modalTitle').textContent=title; $('#modalBody').innerHTML=body; $('#modalErr').innerHTML='';
+  const sb=$('#modalSubmit'); sb.textContent=submit; sb.className='btn '+kind; sb.disabled=false;
+  modalHandler=onSubmit; $('#modalBg').classList.add('open');
+  setTimeout(()=>{ const f=$('#modalBody').querySelector('textarea,input,select'); (f||sb).focus(); },30);
+}
+function closeModal(){ $('#modalBg').classList.remove('open'); modalHandler=null; if(modalReturnFocus) modalReturnFocus.focus(); }
+$('#modalCancel').onclick=closeModal;
+$('#modalBg').addEventListener('click',e=>{ if(e.target.id==='modalBg') closeModal(); });
+$('#modalForm').addEventListener('submit', async e=>{
+  e.preventDefault(); if(!modalHandler) return;
+  const sb=$('#modalSubmit'); sb.disabled=true; $('#modalErr').innerHTML='';
+  try{ await modalHandler(new FormData($('#modalForm'))); closeModal(); }
+  catch(err){ $('#modalErr').innerHTML=errBox(err); sb.disabled=false; }
+});
+
+/* ===================== Navigation ===================== */
+const NAV = [
+  {id:'overview',label:'Обзор',icon:'overview'},
+  {id:'mine',label:'Мои обращения',icon:'mine',count:'my_open'},
+  {id:'queue',label:'Очередь репортов',icon:'queue',count:'queue_unassigned'},
+  {id:'junior',label:'Младший администратор',icon:'junior'},
+  {id:'senior',label:'Старший администратор',icon:'senior',count:'escalations_open',hot:true,senior:true},
+  {sep:true},
+  {id:'assistant',label:'AI Report Assistant',icon:'assistant'},
+  {id:'rules',label:'База правил',icon:'rules'},
+  {id:'analytics',label:'Аналитика',icon:'analytics'},
+  {id:'audit',label:'История действий',icon:'audit'},
+  {id:'settings',label:'Настройки',icon:'settings',seniorOnly:true},
+];
+let navCounts={};
+function renderNav(route){
+  const senior = S.user && S.user.role==='senior_admin';
+  $('#sidebar').innerHTML = NAV.map(n=>{
+    if(n.sep) return '<div class="nav-sep" role="separator"></div>';
+    if(n.seniorOnly && !senior) return '';
+    let tail='';
+    if(n.senior && !senior) tail='<span class="lock" title="Только для старшего администратора">'+ic('lock')+'</span>';
+    else if(n.count && navCounts[n.count]!==undefined) tail=`<span class="count ${n.hot&&navCounts[n.count]>0?'hot':''}">${navCounts[n.count]}</span>`;
+    return `<a href="#${n.id}" class="nav-link ${route===n.id?'active':''}" ${route===n.id?'aria-current="page"':''}>${ic(n.icon)}<span>${n.label}</span>${tail}</a>`;
+  }).join('');
+}
+async function refreshCounts(){
+  try{ navCounts = await api('GET','/api/ws/analytics'); }catch(_){ navCounts={}; }
+  renderNav(currentRoute().page);
+}
+function currentRoute(){ const h=(location.hash||'#overview').slice(1).split('/'); return {page:h[0]||'overview', arg:h[1]?decodeURIComponent(h[1]):null}; }
+
+const PAGES = {};
+async function router(){
+  const {page,arg}=currentRoute();
+  renderNav(page);
+  const main=$('#main'); main.innerHTML=loadingHTML();
+  const fn = PAGES[page] || PAGES.overview;
+  try{ await fn(main,arg); }catch(e){ main.innerHTML=errBox(e); }
+}
+window.addEventListener('hashchange', router);
+
+/* ===================== Ticket list (shared) ===================== */
+const COLS=[['id','ID'],['created_at','Время'],['category','Категория'],['priority','Приоритет'],['language','Язык'],['status','Статус'],['assignee','Назначен'],[null,'Эскалация']];
+
+function filtersHTML(opts={}){
+  const m=S.meta;
+  const opt=(v,l)=>`<option value="${esc(v)}">${esc(l)}</option>`;
+  return `<div class="filters" role="search">
+    <label class="sr-only" for="fq">Поиск</label>
+    <input id="fq" class="input" placeholder="Поиск по ID, тексту, категории…  ( / )" />
+    <select id="fstatus" class="select" aria-label="Статус">${opt('','Все статусы')}${Object.entries(m.statuses).map(([k,v])=>opt(k,v)).join('')}</select>
+    <select id="fcategory" class="select" aria-label="Категория">${opt('','Все категории')}${m.categories.map(c=>opt(c.id,c.name)).join('')}</select>
+    <select id="fpriority" class="select" aria-label="Приоритет">${opt('','Все приоритеты')}${m.priorities.map(p=>opt(p,PRIO[p]||p)).join('')}</select>
+    <select id="flanguage" class="select" aria-label="Язык">${opt('','Все языки')}${m.languages.map(l=>opt(l,l.toUpperCase()+' — '+LANGS[l])).join('')}</select>
+    ${opts.assignee!==false?`<select id="fassignee" class="select" aria-label="Исполнитель">${opt('','Все исполнители')}${opt('none','Не назначен')}${S.users.map(u=>opt(u.id,u.name)).join('')}</select>`:''}
+    <select id="fesc" class="select" aria-label="Эскалация">${opt('','Эскалация: все')}${opt('true','Только эскалированные')}${opt('false','Без эскалации')}</select>
+    <button class="btn sm" id="freset" type="button">Сбросить</button>
+  </div>`;
+}
+function readFilters(){
+  const v=id=>{ const el=$('#'+id); return el?el.value:''; };
+  return {q:v('fq'),status:v('fstatus'),category:v('fcategory'),priority:v('fpriority'),language:v('flanguage'),assignee:v('fassignee'),escalated:v('fesc')};
+}
+function bindFilters(reload){
+  let t; $('#fq').addEventListener('input',()=>{clearTimeout(t); t=setTimeout(reload,220);});
+  ['fstatus','fcategory','fpriority','flanguage','fassignee','fesc'].forEach(id=>{ const el=$('#'+id); if(el) el.addEventListener('change',reload); });
+  $('#freset').onclick=()=>{ document.querySelectorAll('.filters input,.filters select').forEach(el=>el.value=''); reload(); };
+}
+
+async function fetchList(scope){
+  const f=readFilters(); const p=new URLSearchParams({scope,sort:S.list.sort,order:S.list.order});
+  Object.entries(f).forEach(([k,v])=>{ if(v) p.set(k,v); });
+  return api('GET','/api/ws/tickets?'+p.toString());
+}
+
+function tableHTML(rows, caption){
+  if(!rows.length) return `<div class="table-wrap"><div class="empty">Обращений по заданным условиям нет.</div></div>`;
+  const th=COLS.map(([k,l])=>{
+    if(!k) return `<th scope="col"><span class="th">${l}</span></th>`;
+    const active=S.list.sort===k; const dir=active?(S.list.order==='asc'?'ascending':'descending'):'none';
+    return `<th scope="col" aria-sort="${dir}"><button type="button" data-sort="${k}">${l} ${active?(S.list.order==='asc'?'▲':'▼'):''}</button></th>`;
+  }).join('');
+  const tr=rows.map(r=>`<tr tabindex="0" data-id="${esc(r.id)}" class="${r.id===S.selectedId?'sel':''}" aria-selected="${r.id===S.selectedId}">
+    <td class="id">${esc(r.id)}<div class="snip">${esc(r.snippet)}</div></td>
+    <td class="small">${fmtTime(r.created_at)}</td>
+    <td><span class="b b-cat" title="${esc(r.category)}">${esc(r.category_name||r.category)}</span></td>
+    <td>${prioB(r.priority)}</td>
+    <td>${langB(r.language)}</td>
+    <td>${statusB(r.status,r.status_label)}</td>
+    <td class="small">${r.assignee_name?esc(r.assignee_name):'<span class="muted">—</span>'}</td>
+    <td>${r.status==='escalated'?'<span class="b b-human">'+ic('up')+'У старшего</span>':(r.escalated?'<span class="b b-muted">Была</span>':(r.needs_human?'<span class="b b-muted" title="ИИ рекомендует проверку человеком">Нужен человек</span>':'<span class="muted small">—</span>'))}</td>
+  </tr>`).join('');
+  return `<div class="table-wrap"><table><caption>${esc(caption)} · ${rows.length}</caption><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
+}
+function bindTable(container, onSelect, reload){
+  container.querySelectorAll('th button[data-sort]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.sort; if(S.list.sort===k) S.list.order=S.list.order==='asc'?'desc':'asc'; else { S.list.sort=k; S.list.order=k==='priority'||k==='created_at'?'desc':'asc'; }
+    reload();
+  });
+  const rows=[...container.querySelectorAll('tbody tr')];
+  rows.forEach((tr,i)=>{
+    tr.onclick=()=>onSelect(tr.dataset.id);
+    tr.onkeydown=e=>{
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onSelect(tr.dataset.id); }
+      if(e.key==='ArrowDown'&&rows[i+1]){ e.preventDefault(); rows[i+1].focus(); }
+      if(e.key==='ArrowUp'&&rows[i-1]){ e.preventDefault(); rows[i-1].focus(); }
+    };
+  });
+}
+
+/* ===================== Ticket detail (shared) ===================== */
+function factsHTML(f){
+  f=f||{};
+  const list=(a)=>a&&a.length?esc(a.join(', ')):'—';
+  return `<div class="kv">
+    <div><span>Никнеймы</span><b>${list(f.nicknames)}</b></div>
+    <div><span>Нарушитель (по словам игрока)</span><b>${esc(f.offender_nickname||'—')}</b></div>
+    <div><span>Заявитель</span><b>${esc(f.reporter_nickname||'—')}</b></div>
+    <div><span>Сервер</span><b>${f.server!=null?'#'+esc(f.server):'Не указан'}</b></div>
+    <div><span>Доказательства</span><b>${f.has_evidence?'Есть · вложений: '+f.attachments_count:'Не приложены'}</b></div>
+    <div><span>Типы доказательств</span><b>${list(f.evidence_types)}</b></div>
+    <div><span>Пункты, упомянутые игроком</span><b>${list(f.mentioned_rules)}</b></div>
+    <div><span>Неизвестные пункты</span><b style="color:${f.unknown_mentioned_rules&&f.unknown_mentioned_rules.length?'#fca5a5':'inherit'}">${list(f.unknown_mentioned_rules)}</b></div>
+    <div><span>Суммы / команды</span><b>${list([...(f.amounts||[]),...(f.commands_mentioned||[])])}</b></div>
+    <div><span>Смешение языков</span><b>${f.is_mixed_language?'Да: '+list(f.detected_languages):'Нет'}</b></div>
+  </div>`;
+}
+function rulesHTML(cited, verification){
+  const ver={}; (verification||[]).forEach(v=>ver[v.id]=v);
+  const unknown=(verification||[]).filter(v=>v.source==='mentioned_by_player');
+  let html='';
+  if(!cited||!cited.length){
+    html+=`<div class="banner warn"><b>Подходящих пунктов в rules.json не найдено</b>Утверждать нарушение нельзя — требуется проверка человеком. Ссылки на правила не генерируются.</div>`;
+  } else {
+    html+=cited.map(r=>{ const v=ver[r.id]; const ok=!v||v.exists;
+      return `<div class="rule"><div class="rh"><span><span class="rid">п. ${esc(r.id)}</span> <b style="font-size:.86rem">${esc(r.title)}</b></span>
+        <span class="${ok?'ver-ok':'ver-bad'}">${ok?ic('check')+' ID найден в rules.json':ic('x')+' ID не найден'}</span></div>
+        <q>${esc(r.quote)}</q><div class="pun">Регламент: ${esc(r.punishment||'по решению администрации')} · релевантность ${Math.round((r.relevance_score||0)*100)}%</div></div>`;
+    }).join('');
+  }
+  if(unknown.length){
+    html+=`<div class="banner human" style="margin-top:8px"><b>Игрок сослался на несуществующие пункты</b>${unknown.map(u=>`<span class="ver-bad">${ic('x')} п. ${esc(u.id)} — отсутствует в rules.json</span>`).join('<br>')}</div>`;
+  }
+  return `<div class="stack">${html}</div>`;
+}
+function historyHTML(h){
+  if(!h||!h.length) return '<div class="muted small">История пуста</div>';
+  return `<ul class="timeline">${h.slice().reverse().map(e=>`<li><div><b>${esc(e.actor_name)}</b> — ${esc(ACTION_NAMES[e.action]||e.action)}</div>
+    <div class="when">${fmtTime(e.ts)}${detailsLine(e.details)}</div></li>`).join('')}</ul>`;
+}
+function detailsLine(d){
+  if(!d) return ''; const parts=[];
+  if(d.reason) parts.push('причина: '+d.reason); if(d.comment) parts.push('комментарий: '+d.comment);
+  if(d.basis) parts.push('основание: '+d.basis); if(d.decision) parts.push('решение: '+((S.meta&&S.meta.decisions[d.decision])||d.decision));
+  if(d.to_name) parts.push('→ '+d.to_name); if(d.rule_ids&&d.rule_ids.length) parts.push('пункты: '+d.rule_ids.join(', '));
+  if(d.safety_ok===false) parts.push('⚠ черновик не прошёл фильтр безопасности');
+  return parts.length?' · '+esc(parts.join(' · ')):'';
+}
+function humanBanner(tr){
+  return tr.needs_human
+    ? `<div class="banner human"><b>${ic('alert')} Нужна проверка человеком</b>${esc(tr.needs_human_reason||'Требуется проверка модератором')}</div>`
+    : `<div class="banner auto"><b>${ic('check')} Проверка человеком не обязательна</b>Ответ подтверждён пунктами rules.json, рисков не выявлено. Оператор всё равно проверяет текст перед отправкой.</div>`;
+}
+
+const JUNIOR_ACTIONS=['take','retriage','save_draft','request_info','send_reply','escalate'];
+const SENIOR_ACTIONS=['take','assign','retriage','save_draft','request_info','send_reply','approve','return','close'];
+const ACTION_UI={
+  take:{label:'Взять в работу',icon:'hand',cls:'primary'}, assign:{label:'Переназначить',icon:'user',cls:''},
+  retriage:{label:'Перегенерировать',icon:'refresh',cls:''}, save_draft:{label:'Сохранить черновик',icon:'save',cls:''},
+  request_info:{label:'Запросить данные',icon:'ask',cls:''}, send_reply:{label:'Отправить ответ',icon:'send',cls:'ok'},
+  escalate:{label:'Передать старшему специалисту',icon:'up',cls:'danger'}, approve:{label:'Одобрить решение',icon:'check',cls:'ok'},
+  return:{label:'Вернуть на доработку',icon:'refresh',cls:'warn'}, close:{label:'Закрыть',icon:'x',cls:'danger'}
+};
+
+function ticketDetailHTML(t, mode){
+  const tr=t.triage||{}; const canEdit=t.allowed_actions.includes('save_draft');
+  const set=(S.user.role==='senior_admin'?SENIOR_ACTIONS:JUNIOR_ACTIONS);
+  const buttons=set.map(a=>{ const u=ACTION_UI[a]; const allowed=t.allowed_actions.includes(a);
+    if(!allowed && (a==='take') ) return '';
+    return `<button type="button" class="btn ${u.cls}" data-act="${a}" ${allowed?'':'disabled'} title="${esc(allowed?u.label:(t.denied_actions[a]||''))}">${ic(u.icon)}${u.label}</button>`;
+  }).join('');
+  const deniedNotes=set.filter(a=>!t.allowed_actions.includes(a)&&a!=='take').map(a=>`<li><b>${ACTION_UI[a].label}:</b> ${esc(t.denied_actions[a])}</li>`).join('');
+
+  const esc_=t.escalation?`<div class="banner human"><b>${ic('up')} Причина эскалации</b>${esc(t.escalation.reason)}<div class="small muted">${esc(t.escalation.by_name)} · ${fmtTime(t.escalation.at)}</div></div>`:'';
+  const rev=t.review?`<div class="banner ${t.review.action==='return'?'warn':'info'}"><b>Решение старшего: ${esc(t.review.action==='approve'?(t.review.decision_label):(t.review.action==='return'?'возвращено на доработку':'закрыто'))}</b>
+     ${t.review.basis?'Основание: '+esc(t.review.basis)+'<br>':''}${t.review.comment?'Комментарий: '+esc(t.review.comment)+'<br>':''}
+     ${t.review.evidence_reference?'Проверенные доказательства: '+esc(t.review.evidence_reference)+'<br>':''}
+     ${t.review.rule_ids&&t.review.rule_ids.length?'Пункты: '+esc(t.review.rule_ids.join(', '))+'<br>':''}
+     <span class="small muted">${esc(t.review.by_name)} · ${fmtTime(t.review.at)}${t.review.note?' · '+esc(t.review.note):''}</span></div>`:'';
+  const juniorResp = (mode==='senior')?`<div class="card"><h3>Ответ младшего администратора</h3>${t.junior_response?`<div class="msg admin"><div class="tx">${esc(t.junior_response)}</div></div>`:'<div class="muted small">Младший администратор не подготовил ответ.</div>'}</div>`:'';
+  const aiInitial = (mode==='senior')?`<div class="card"><h3>Первоначальный анализ ИИ <span class="b b-muted">рекомендация, не решение</span></h3>
+     <div class="kv"><div><span>Категория</span><b>${esc(tr.category_name||tr.category)}</b></div><div><span>Приоритет</span><b>${esc(PRIO[tr.priority]||tr.priority)}</b></div>
+     <div><span>Confidence</span><b>${Math.round((tr.confidence||0)*100)}%</b></div><div><span>Спам / дубликат</span><b>${tr.is_spam?'спам':'нет'} / ${tr.is_duplicate?'дубликат':'нет'}</b></div></div>
+     <details style="margin-top:8px"><summary>Обоснование ИИ (reasons)</summary><ul class="reasons">${(tr.reasons||[]).map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details></div>`:'';
+  const similar=(t.similar_tickets&&t.similar_tickets.length)?`<div class="banner warn"><b>Похожие обращения (возможные дубликаты)</b>${t.similar_tickets.map(s=>`${esc(s.id)} — сходство ${Math.round(s.similarity*100)}%, ${esc(s.status_label)}`).join('<br>')}</div>`:'';
+
+  return `<div class="stack">
+    <div class="t-head"><h2>${esc(t.id)}</h2>${statusB(t.status,t.status_label)}${prioB(tr.priority)}${langB(tr.language)}<span class="b b-cat">${esc(tr.category_name||tr.category)}</span>
+      <span class="b b-muted">${ic('user')}${esc(t.assignee_name||'Не назначен')}</span><span class="b b-muted">Confidence ${Math.round((tr.confidence||0)*100)}%</span>
+      ${t.is_synthetic_demo?'<span class="b b-muted" title="Синтетическое демонстрационное обращение">demo</span>':''}</div>
+    ${esc_}${rev}${humanBanner(tr)}${similar}
+    ${aiInitial}${juniorResp}
+    <div class="card"><h3>Переписка <span class="small muted">${esc(t.kind)} · создано ${fmtTime(t.created_at)}</span></h3><div class="stack">
+      ${(t.messages||[]).map(m=>`<div class="msg ${m.role!=='player'?'admin':''}"><div class="meta"><span>${m.role==='player'?'Игрок':'Поддержка'+(m.type==='info_request'?' · запрос данных':'')}</span><span>${m.at?fmtTime(m.at)+' · ':''}вложений: ${typeof m.attachments==='number'?m.attachments:(Array.isArray(m.attachments)?m.attachments.length:0)}</span></div><div class="tx">${esc(m.text)}</div></div>`).join('')}
+    </div></div>
+    <div class="card"><h3>Извлечённые факты</h3>${factsHTML(tr.facts)}</div>
+    <div class="card"><h3>${mode==='senior'?'Подтверждённые источники':'Найденные пункты правил'} <span class="b b-cat">${(tr.cited_rules||[]).length}</span></h3>${rulesHTML(tr.cited_rules,t.rule_verification)}</div>
+    <div class="card"><h3>Черновик ИИ ${canEdit?'<span class="small muted">редактируемый</span>':'<span class="small muted">только чтение</span>'}</h3>
+      <label class="sr-only" for="draftText">Черновик ответа</label>
+      <textarea id="draftText" class="textarea" rows="7" ${canEdit?'':'readonly'}>${esc(t.draft||'')}</textarea>
+      <div class="actions" style="margin-top:10px"><button type="button" class="btn primary" data-act="copy">${ic('copy')}Скопировать ответ</button>${buttons}</div>
+      ${deniedNotes?`<details style="margin-top:8px"><summary>Почему некоторые действия недоступны</summary><ul class="reasons">${deniedNotes}</ul></details>`:''}
+    </div>
+    ${mode!=='senior'?`<div class="card"><details><summary>Обоснование триажа ИИ (reasons)</summary><ul class="reasons">${(tr.reasons||[]).map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details></div>`:''}
+    <div class="card"><h3>История изменений</h3>${historyHTML(t.history)}</div>
+  </div>`;
+}
+
+const INFO_TEMPLATES={
+  ru:'Здравствуйте! Чтобы мы могли проверить обращение, пришлите, пожалуйста: скриншот или видео с видимым временем (/time), номер сервера и точный никнейм/ID игрока. Отсутствие доказательств само по себе не означает, что жалоба ложная.',
+  kk:'Сәлеметсіз бе! Өтінішті тексеру үшін /time көрінетін скриншот немесе видео, сервер нөмірін және ойыншының нақты никін жіберіңіз.',
+  uz:"Assalomu alaykum! Murojaatni tekshirishimiz uchun /time ko'rinadigan skrinshot yoki video, server raqami va o'yinchining aniq nikneymini yuboring.",
+  en:'Hello! To review your report, please send a screenshot or video showing the time (/time), the server number and the exact nickname/ID of the player.'
+};
+
+async function ticketAction(t, act, afterChange){
+  const id=encodeURIComponent(t.id); const draft=()=>($('#draftText')||{}).value||'';
+  const done=async(msg)=>{ toast(msg); await afterChange(); refreshCounts(); };
+  try{
+    if(act==='copy') return copyText(draft());
+    if(act==='take'){ await api('POST',`/api/ws/tickets/${id}/take`); return done('Обращение взято в работу'); }
+    if(act==='retriage'){ await api('POST',`/api/ws/tickets/${id}/triage`); return done('Анализ ИИ перегенерирован'); }
+    if(act==='save_draft'){ const r=await api('PUT',`/api/ws/tickets/${id}/draft`,{text:draft()}); toast(r.safety_warnings&&r.safety_warnings.length?'Черновик сохранён, но не пройдёт отправку: '+r.safety_warnings.join(', '):'Черновик сохранён', r.safety_warnings&&r.safety_warnings.length?'warn':'ok'); await afterChange(); return; }
+    if(act==='send_reply') return openModal({title:'Отправить ответ игроку',submit:'Отправить',kind:'ok',
+      body:`<p class="muted small" style="margin-bottom:8px">Текст пройдёт серверную проверку безопасности. Обращение будет отмечено как решённое.</p><div class="msg admin"><div class="tx">${esc(draft())}</div></div>`,
+      onSubmit:async()=>{ await api('POST',`/api/ws/tickets/${id}/send`,{text:draft()}); await done('Ответ отправлен'); }});
+    if(act==='request_info') return openModal({title:'Запросить дополнительные данные',submit:'Отправить запрос',
+      body:`<div class="field"><label for="m_text">Сообщение игроку</label><textarea id="m_text" name="text" class="textarea" rows="5" required>${esc(INFO_TEMPLATES[(t.triage||{}).language]||INFO_TEMPLATES.ru)}</textarea></div>`,
+      onSubmit:async(fd)=>{ await api('POST',`/api/ws/tickets/${id}/request-info`,{text:fd.get('text')}); await done('Запрос данных отправлен'); }});
+    if(act==='escalate') return openModal({title:'Передать старшему специалисту',submit:'Эскалировать',kind:'danger',
+      body:`<div class="field"><label for="m_reason">Причина эскалации (обязательно)</label><textarea id="m_reason" name="reason" class="textarea" rows="4" minlength="5" required>${esc((t.triage||{}).needs_human_reason||'')}</textarea></div><p class="small muted">Текущий черновик будет передан старшему как ваш вариант ответа.</p>`,
+      onSubmit:async(fd)=>{ await api('POST',`/api/ws/tickets/${id}/escalate`,{reason:fd.get('reason')}); await done('Обращение передано старшему специалисту'); }});
+    if(act==='assign') return openModal({title:'Переназначить обращение',submit:'Назначить',
+      body:`<div class="field"><label for="m_user">Исполнитель</label><select id="m_user" name="assignee_id" class="select">${S.users.map(u=>`<option value="${esc(u.id)}" ${u.id===t.assignee?'selected':''}>${esc(u.name)} — ${esc(u.role_label)}</option>`).join('')}</select></div>`,
+      onSubmit:async(fd)=>{ await api('POST',`/api/ws/tickets/${id}/assign`,{assignee_id:fd.get('assignee_id')}); await done('Исполнитель назначен'); }});
+    if(act==='return') return openModal({title:'Вернуть на доработку',submit:'Вернуть',kind:'warn',
+      body:`<div class="field"><label for="m_c">Комментарий исполнителю (обязательно)</label><textarea id="m_c" name="comment" class="textarea" rows="4" required minlength="5"></textarea></div>`,
+      onSubmit:async(fd)=>{ await api('POST',`/api/ws/tickets/${id}/review`,{action:'return',comment:fd.get('comment')}); await done('Обращение возвращено на доработку'); }});
+    if(act==='close') return openModal({title:'Закрыть обращение',submit:'Закрыть',kind:'danger',
+      body:`<div class="field"><label for="m_b">Основание закрытия (обязательно)</label><textarea id="m_b" name="basis" class="textarea" rows="3" required minlength="5"></textarea></div>`,
+      onSubmit:async(fd)=>{ await api('POST',`/api/ws/tickets/${id}/review`,{action:'close',basis:fd.get('basis')}); await done('Обращение закрыто'); }});
+    if(act==='approve'){
+      const cited=(t.triage&&t.triage.cited_rules)||[];
+      return openModal({title:'Одобрить итоговое решение',submit:'Зафиксировать решение',kind:'ok',
+        body:`<div class="banner warn" style="margin-bottom:12px"><b>ИИ не принимает решений</b>Анализ ИИ — только рекомендация. Подтвердить нарушение можно лишь после личной проверки доказательств; основание и автор решения фиксируются в журнале.</div>
+        <div class="field"><label for="m_dec">Итоговое решение</label><select id="m_dec" name="decision" class="select">${Object.entries(S.meta.decisions).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div>
+        <div class="field"><label for="m_basis">Основание решения (обязательно, от 10 символов)</label><textarea id="m_basis" name="basis" class="textarea" rows="3" required minlength="10"></textarea></div>
+        <div class="field"><label>Пункты rules.json, на которых основано решение</label>${cited.length?cited.map(r=>`<label class="check"><input type="checkbox" name="rule_ids" value="${esc(r.id)}"> п. ${esc(r.id)} — ${esc(r.title)}</label>`).join(''):'<div class="small muted">ИИ не нашёл подходящих пунктов.</div>'}
+          <input name="extra_rules" class="input" style="width:100%;margin-top:6px" placeholder="Другие пункты через запятую (проверяются на сервере), напр. 7.2"></div>
+        <label class="check"><input type="checkbox" name="evidence_verified" value="1"> Я лично проверил доказательства / серверные логи</label>
+        <div class="field"><label for="m_ref">Что именно проверено (обязательно для подтверждения нарушения)</label><input id="m_ref" name="evidence_reference" class="input" placeholder="Например: видео от игрока 12:40, логи чата сервера #5"></div>
+        <label class="check"><input type="checkbox" name="send_reply" value="1"> Отправить игроку текущий черновик как финальный ответ</label>`,
+        onSubmit:async(fd)=>{
+          const rule_ids=[...fd.getAll('rule_ids'), ...String(fd.get('extra_rules')||'').split(',').map(s=>s.trim()).filter(Boolean)];
+          await api('POST',`/api/ws/tickets/${id}/review`,{action:'approve',decision:fd.get('decision'),basis:fd.get('basis'),
+            rule_ids:[...new Set(rule_ids)],evidence_verified:fd.get('evidence_verified')==='1',evidence_reference:fd.get('evidence_reference')||null,
+            reply_text:fd.get('send_reply')==='1'?draft():null});
+          await done('Решение зафиксировано');
+        }});
+    }
+  }catch(e){ toast(e.message,'error'); }
+}
+
+async function loadDetail(container, id, mode, onChanged){
+  S.selectedId=id; container.innerHTML=loadingHTML('Загрузка карточки…');
+  try{
+    const t=await api('GET','/api/ws/tickets/'+encodeURIComponent(id));
+    container.innerHTML=ticketDetailHTML(t, mode);
+    container.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>ticketAction(t,b.dataset.act,async()=>{ await onChanged(); await loadDetail(container,id,mode,onChanged); }));
+  }catch(e){ container.innerHTML=errBox(e); }
+}
+
+/* ===================== List pages ===================== */
+async function listPage(main, arg, cfg){
+  main.innerHTML=`<div class="page-head"><div><h1>${cfg.title}</h1><p>${cfg.subtitle}</p></div>${cfg.headExtra||''}</div>
+    ${filtersHTML(cfg.filters||{})}<div class="split"><section id="listBox" aria-label="Список обращений">${loadingHTML()}</section><aside class="detail" id="detailBox" aria-label="Карточка обращения"><div class="card empty">Выберите обращение в списке (клавиши ↑ ↓ и Enter).</div></aside></div>`;
+  const listBox=$('#listBox'), detailBox=$('#detailBox');
+  const select=(id)=>{ history.replaceState(null,'',`#${cfg.page}/${encodeURIComponent(id)}`); highlight(id); loadDetail(detailBox,id,cfg.mode,reload); };
+  const highlight=(id)=>listBox.querySelectorAll('tbody tr').forEach(tr=>{ const on=tr.dataset.id===id; tr.classList.toggle('sel',on); tr.setAttribute('aria-selected',on); });
+  async function reload(){
+    try{ const d=await fetchList(cfg.scope); listBox.innerHTML=tableHTML(d.tickets, cfg.caption||'Список обращений'); bindTable(listBox, select, reload); highlight(S.selectedId); }
+    catch(e){ listBox.innerHTML=errBox(e); }
+  }
+  bindFilters(reload);
+  await reload();
+  if(arg) select(arg);
+}
+
+PAGES.mine=(m,a)=>listPage(m,a,{page:'mine',scope:'mine',title:'Мои обращения',subtitle:'Тикеты, назначенные на вас.',caption:'Мои обращения',filters:{assignee:false}});
+PAGES.queue=(m,a)=>listPage(m,a,{page:'queue',scope:'queue',title:'Очередь репортов',subtitle:'Новые и возвращённые обращения без исполнителя. Возьмите тикет в работу из карточки.',caption:'Очередь без исполнителя'});
+PAGES.junior=(m,a)=>listPage(m,a,{page:'junior',scope:'all',title:'Рабочее место администратора',
+  subtitle: S.user.role==='senior_admin'?'Все обращения команды, включая работу младших администраторов.':'Ваши обращения и разрешённая общая очередь.',caption:'Список обращений'});
+
+/* ===================== Senior page ===================== */
+PAGES.senior=async(main,arg)=>{
+  if(S.user.role!=='senior_admin'){
+    // Ask backend anyway to demonstrate server-side enforcement
+    try{ await api('GET','/api/ws/tickets?scope=escalations'); }catch(e){
+      main.innerHTML=`<div class="page-head"><div><h1>Старший администратор</h1><p>Очередь эскалаций и итоговые решения.</p></div></div>${errBox(e)}
+      <p class="muted small" style="margin-top:10px">Ответ получен от backend: доступ к очереди эскалаций есть только у роли senior_admin.</p>`; return;
+    }
+  }
+  main.innerHTML=`<div class="page-head"><div><h1>Старший администратор</h1><p>Сложные и эскалированные обращения. Решение фиксируется с основанием и автором.</p></div></div>
+    <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="esc" aria-selected="true">Очередь эскалаций</button><button class="tab" role="tab" data-tab="jr" aria-selected="false">В работе у младших</button><button class="tab" role="tab" data-tab="crit" aria-selected="false">Критические без решения</button></div>
+    <div class="split"><section id="sList" aria-label="Очередь">${loadingHTML()}</section><aside class="detail" id="sDetail" aria-label="Карточка"><div class="card empty">Выберите обращение.</div></aside></div>`;
+  let tab='esc';
+  const det=$('#sDetail');
+  async function reload(){
+    const box=$('#sList'); box.innerHTML=loadingHTML();
+    try{
+      let rows;
+      if(tab==='esc') rows=(await api('GET','/api/ws/tickets?scope=escalations&sort=priority')).tickets;
+      else if(tab==='jr'){ const juniors=S.users.filter(u=>u.role==='junior_admin').map(u=>u.id);
+        rows=(await api('GET','/api/ws/tickets?scope=all&sort=priority')).tickets.filter(r=>juniors.includes(r.assignee)&&!['resolved','closed'].includes(r.status)); }
+      else rows=(await api('GET','/api/ws/tickets?scope=all&priority=critical&sort=created_at')).tickets.filter(r=>!['resolved','closed'].includes(r.status));
+      if(!rows.length){ box.innerHTML='<div class="card empty">Здесь пусто — нет обращений, требующих решения.</div>'; return; }
+      box.innerHTML=`<div class="stack">${rows.map(r=>`<div class="card" tabindex="0" role="button" data-id="${esc(r.id)}" style="cursor:pointer;${r.id===S.selectedId?'border-color:var(--accent)':''}">
+        <div class="t-head" style="margin-bottom:4px"><b style="font-family:monospace">${esc(r.id)}</b>${prioB(r.priority)}${statusB(r.status,r.status_label)}${langB(r.language)}<span class="b b-cat">${esc(r.category_name)}</span></div>
+        <div class="small muted">${esc(r.snippet)}</div><div class="small" style="margin-top:4px">${ic('user')} ${esc(r.assignee_name||'—')} · ${fmtTime(r.updated_at)}</div></div>`).join('')}</div>`;
+      box.querySelectorAll('[data-id]').forEach(c=>{ const go=()=>{ history.replaceState(null,'','#senior/'+encodeURIComponent(c.dataset.id)); loadDetail(det,c.dataset.id,'senior',reload); };
+        c.onclick=go; c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} }; });
+    }catch(e){ box.innerHTML=errBox(e); }
+  }
+  main.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ tab=b.dataset.tab; main.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===b)); reload(); });
+  await reload();
+  if(arg) loadDetail(det,arg,'senior',reload);
+};
+
+/* ===================== Overview ===================== */
+PAGES.overview=async(main)=>{
+  const [a, att, aud]=await Promise.all([api('GET','/api/ws/analytics'), api('GET','/api/ws/tickets?scope=all&sort=priority'), api('GET','/api/ws/audit?limit=6')]);
+  const senior=S.user.role==='senior_admin';
+  const attention=att.tickets.filter(r=>!['resolved','closed'].includes(r.status)).slice(0,8);
+  const stat=(v,l,href,hot)=>`<div class="stat ${hot&&v>0?'hot':''}"><a href="${href}"><div class="v">${v}</div><div class="l">${l}</div></a></div>`;
+  main.innerHTML=`<div class="page-head"><div><h1>Обзор</h1><p>${esc(S.user.name)} · ${esc(S.user.role_label)}</p></div>
+    <div class="actions"><a class="btn primary" href="#assistant">${ic('assistant')}Проверить репорт</a><a class="btn" href="#queue">${ic('queue')}Очередь</a></div></div>
+    <div class="stats">
+      ${stat(a.my_open,'Мои открытые обращения','#mine')}
+      ${stat(a.queue_unassigned,'В очереди без исполнителя','#queue')}
+      ${stat(a.escalations_open, senior?'Эскалации ждут решения':'Мои обращения у старшего', senior?'#senior':'#mine', true)}
+      ${stat(a.critical_open,'Критические открытые','#junior',true)}
+      ${stat(a.needs_human_open,'Требуют проверки человеком','#junior')}
+    </div>
+    <div class="grid2">
+      <section class="card"><h2>Требуют внимания <a class="small" href="#junior">все →</a></h2>
+        ${attention.length?`<div class="stack">${attention.map(r=>`<a href="#junior/${encodeURIComponent(r.id)}" class="msg" style="display:block;color:inherit">
+          <div class="t-head" style="margin-bottom:2px"><b style="font-family:monospace">${esc(r.id)}</b>${prioB(r.priority)}${statusB(r.status,r.status_label)}${r.needs_human?'<span class="b b-human">Нужен человек</span>':''}</div>
+          <div class="small muted">${esc(r.category_name)} · ${esc(r.assignee_name||'не назначен')} · ${fmtTime(r.created_at)}</div></a>`).join('')}</div>`:'<div class="empty">Открытых обращений нет.</div>'}
+      </section>
+      <section class="card"><h2>Последние действия ${senior?'команды':'(ваши)'} <a class="small" href="#audit">журнал →</a></h2>${historyHTML(aud.entries.slice().reverse())}
+        <div class="kv" style="margin-top:12px"><div><span>Среднее / p95 время триажа</span><b>${a.processing.avg_processing_time_ms} / ${a.processing.p95_processing_time_ms} мс</b></div>
+        <div><span>Стоимость на обращение</span><b>$${Number(a.processing.avg_cost_usd||0).toFixed(4)}</b></div></div>
+      </section>
+    </div>`;
+};
+
+/* ===================== AI Report Assistant ===================== */
+PAGES.assistant=async(main,arg)=>{
+  const tickets=(await api('GET','/api/ws/tickets?scope=all&sort=created_at')).tickets;
+  const A=S.assistant; if(arg){ A.mode='ticket'; A.ticketId=arg; }
+  main.innerHTML=`<div class="page-head"><div><h1>AI Report Assistant</h1><p>Анализ репорта: язык, категория и приоритет по taxonomy.json, факты, дубликаты, пункты rules.json с проверкой ID и безопасный черновик.</p></div></div>
+  <div class="split" style="grid-template-columns:minmax(320px,.8fr) minmax(0,1.2fr)">
+    <section class="card" aria-label="Входные данные">
+      <div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-mode="text">Вставить текст</button><button type="button" class="tab" role="tab" data-mode="ticket">Открыть тикет</button></div>
+      <div id="aText">
+        <div class="field"><label for="aKind">Тип обращения</label><select id="aKind" class="select" style="width:100%">
+          <option value="complaint">Жалоба</option><option value="question">Вопрос</option><option value="appeal">Обжалование / разбан</option><option value="bug">Технический баг</option></select></div>
+        <div class="field"><label for="aInput">Текст репорта игрока</label><textarea id="aInput" class="textarea" rows="8" placeholder="Вставьте текст обращения игрока…"></textarea></div>
+        <div class="field"><label for="aAtt">Количество вложений (скриншоты/видео)</label><input id="aAtt" type="number" min="0" max="50" value="0" class="input" style="width:120px"></div>
+      </div>
+      <div id="aTicket" hidden>
+        <div class="field"><label for="aTicketSel">Тикет</label><select id="aTicketSel" class="select" style="width:100%">${tickets.map(t=>`<option value="${esc(t.id)}">${esc(t.id)} — ${esc((t.snippet||'').slice(0,60))}</option>`).join('')}</select></div>
+        ${tickets.length?'':'<div class="muted small">Нет доступных тикетов.</div>'}
+      </div>
+      <div class="actions"><button type="button" class="btn primary" id="aRun">${ic('assistant')}Проанализировать</button><button type="button" class="btn" id="aClear">Очистить</button></div>
+      <p class="small muted" style="margin-top:10px">Ctrl+Enter — запустить анализ. Анализ не сохраняется, пока вы не нажмёте «Сохранить».</p>
+      <div class="card" style="margin-top:14px;background:var(--bg)"><h3>История сохранений</h3><div id="aHist">${loadingHTML()}</div></div>
+    </section>
+    <section id="aOut" aria-live="polite"><div class="card empty">Результат анализа появится здесь. Вставьте текст репорта или выберите тикет.</div></section>
+  </div>`;
+  const setMode=(m)=>{ A.mode=m; main.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-selected',b.dataset.mode===m)); $('#aText').hidden=m!=='text'; $('#aTicket').hidden=m!=='ticket'; };
+  main.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+  setMode(A.mode); if(A.ticketId && $('#aTicketSel')) $('#aTicketSel').value=A.ticketId;
+  if(A.text) $('#aInput').value=A.text;
+  $('#aRun').onclick=run; $('#aClear').onclick=()=>{ $('#aInput').value=''; A.result=null; A.text=''; $('#aOut').innerHTML='<div class="card empty">Результат анализа появится здесь.</div>'; };
+  $('#aInput').addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) run(); });
+  loadHist();
+  if(A.result) renderResult(A.result);
+
+  async function loadHist(){
+    try{ const d=await api('GET','/api/ws/audit?action=assistant_saved&limit=8');
+      $('#aHist').innerHTML=d.entries.length?`<ul class="timeline">${d.entries.map(e=>`<li><a href="#junior/${encodeURIComponent(e.ticket_id)}">${esc(e.ticket_id)}</a> — ${esc(e.actor_name)}<div class="when">${fmtTime(e.ts)} · ${e.details.mode==='new_ticket'?'новый тикет':'обновление тикета'}</div></li>`).join('')}</ul>`:'<div class="muted small">Пока ничего не сохранено.</div>';
+    }catch(e){ $('#aHist').innerHTML=errBox(e); }
+  }
+  async function run(){
+    const out=$('#aOut'); const body={kind:$('#aKind').value, attachments:parseInt($('#aAtt').value||'0',10)};
+    if(A.mode==='ticket'){ body.ticket_id=$('#aTicketSel').value; if(!body.ticket_id){ toast('Выберите тикет','warn'); return; } }
+    else { body.text=$('#aInput').value.trim(); A.text=body.text; if(!body.text){ out.innerHTML='<div class="card empty">Нет текста для анализа — вставьте текст репорта.</div>'; $('#aInput').focus(); return; } }
+    $('#aRun').disabled=true;
+    out.innerHTML=`<div class="card"><div class="muted"><span class="spinner"></span> Анализ: язык, классификация, поиск в rules.json…</div><div class="skel" style="width:70%"></div><div class="skel"></div><div class="skel" style="width:85%"></div></div>`;
+    try{ A.result=await api('POST','/api/ws/assistant/analyze',body); A.input=body; renderResult(A.result); }
+    catch(e){ out.innerHTML=`${errBox(e)}<div class="actions" style="margin-top:10px"><button class="btn" id="aRetry">${ic('refresh')}Повторить</button></div>`; $('#aRetry').onclick=run; }
+    finally{ $('#aRun').disabled=false; }
+  }
+  function renderResult(r){
+    const tr=r.triage, f=tr.facts||{};
+    const dupBlock=(tr.is_spam||tr.is_duplicate||(r.similar_tickets&&r.similar_tickets.length))
+      ? `<div class="banner warn"><b>Спам / дубликаты</b>${tr.is_spam?'Признаки спама или флуда.<br>':''}${tr.is_duplicate?'Повтор ранее отправленного обращения.<br>':''}
+         ${(r.similar_tickets||[]).map(s=>`Похоже на <a href="#junior/${encodeURIComponent(s.id)}">${esc(s.id)}</a> — сходство ${Math.round(s.similarity*100)}% (${esc(s.status_label)})`).join('<br>')}</div>`
+      : `<div class="banner auto"><b>${ic('check')} Спам и дубликаты не обнаружены</b>Похожих обращений в базе тикетов нет.</div>`;
+    const unknownVer=(r.rule_verification||[]);
+    $('#aOut').innerHTML=`<div class="stack">
+      <div class="card"><h3>Классификация</h3><div class="t-head">${langB(tr.language)}<span class="b b-cat">${esc(tr.category_name||tr.category)}</span>${prioB(tr.priority)}
+        <span class="b ${tr.needs_human?'b-human':'b-auto'}">needs_human: ${tr.needs_human}</span><span class="b b-muted">confidence: ${Number(tr.confidence).toFixed(2)}</span>
+        <span class="b b-muted">${tr.processing_time_ms} мс · $${Number(tr.cost_usd||0).toFixed(4)}</span></div>
+        <div class="small muted">Язык: ${esc(LANGS[tr.language]||tr.language)}${f.is_mixed_language?' (смешение: '+esc((f.detected_languages||[]).join(', '))+')':''} · категория и приоритет — из taxonomy.json</div></div>
+      ${humanBanner(tr)}
+      ${dupBlock}
+      <div class="card"><h3>Найденные пункты rules.json и проверка ID <span class="b b-cat">${(tr.cited_rules||[]).length}</span></h3>${rulesHTML(tr.cited_rules, unknownVer)}
+        ${unknownVer.length?`<div class="small muted" style="margin-top:8px">Проверено ID: ${unknownVer.map(v=>`<span class="${v.exists?'ver-ok':'ver-bad'}">${esc(v.id)} ${v.exists?'✓':'✗'}</span>`).join(' · ')}</div>`:''}</div>
+      <div class="card"><h3>Извлечённые факты</h3>${factsHTML(f)}</div>
+      <div class="card"><h3>Черновик ответа на языке игрока (${esc(tr.language)})</h3>
+        <label class="sr-only" for="aDraft">Черновик</label><textarea id="aDraft" class="textarea" rows="7">${esc(tr.draft_response)}</textarea>
+        <div class="actions" style="margin-top:10px"><button class="btn primary" id="aCopy">${ic('copy')}Скопировать ответ</button>
+          <button class="btn" id="aRegen">${ic('refresh')}Перегенерировать</button>
+          <button class="btn ok" id="aSave">${ic('save')}${r.ticket_id?'Сохранить в тикет '+esc(r.ticket_id):'Сохранить как новый тикет'}</button>
+          ${r.ticket_id?`<a class="btn" href="#junior/${encodeURIComponent(r.ticket_id)}">Открыть карточку</a>`:''}</div>
+        <p class="small muted" style="margin-top:6px">Черновик не отправляется игроку автоматически. Отправка, эскалация и решения — в карточке тикета согласно вашей роли.</p></div>
+      <div class="card"><h3>Обоснование (reasons)</h3><ul class="reasons">${(tr.reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    </div>`;
+    $('#aCopy').onclick=()=>copyText($('#aDraft').value);
+    $('#aRegen').onclick=run;
+    $('#aSave').onclick=async()=>{
+      const b=$('#aSave'); b.disabled=true;
+      try{
+        const body=r.ticket_id?{ticket_id:r.ticket_id,draft:$('#aDraft').value}:{text:A.input.text,kind:A.input.kind,attachments:A.input.attachments,draft:$('#aDraft').value};
+        const t=await api('POST','/api/ws/assistant/save',body);
+        toast('Сохранено: '+t.id); r.ticket_id=t.id; loadHist(); refreshCounts();
+        b.outerHTML=`<a class="btn ok" href="#junior/${encodeURIComponent(t.id)}">${ic('check')}Сохранено — открыть ${esc(t.id)}</a>`;
+      }catch(e){ toast(e.message,'error'); b.disabled=false; }
+    };
+  }
+};
+
+/* ===================== Rules ===================== */
+PAGES.rules=async(main)=>{
+  const d=await api('GET','/api/ws/rules');
+  main.innerHTML=`<div class="page-head"><div><h1>База правил</h1><p>Источник: ${esc(d.source)} · ${d.count} пунктов · только чтение. Изменение правил через панель не предусмотрено ни для одной роли.</p></div></div>
+    <div class="filters"><input id="rq" class="input" placeholder="Поиск по ID, заголовку, тексту… ( / )"><select id="rc" class="select" aria-label="Категория"><option value="">Все категории</option>${S.meta.categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
+    <div id="rList" class="stack"></div>`;
+  const render=()=>{
+    const q=$('#rq').value.toLowerCase().trim(), c=$('#rc').value;
+    const rows=d.rules.filter(r=>(!c||r.category===c)&&(!q||(r.id+' '+r.title+' '+r.text+' '+r.section).toLowerCase().includes(q)));
+    $('#rList').innerHTML=rows.length?rows.map(r=>`<div class="rule"><div class="rh"><span><span class="rid">п. ${esc(r.id)}</span> <b>${esc(r.title)}</b></span><span class="b b-cat">${esc(catName(r.category))}</span></div>
+      <div class="small muted">${esc(r.section)}</div><q>${esc(r.text)}</q><div class="pun">Регламент: ${esc(r.punishment)}</div></div>`).join(''):'<div class="card empty">Ничего не найдено.</div>';
+  };
+  $('#rq').addEventListener('input',render); $('#rc').addEventListener('change',render); render();
+};
+
+/* ===================== Analytics ===================== */
+PAGES.analytics=async(main)=>{
+  const a=await api('GET','/api/ws/analytics');
+  const bars=(obj,labelFn)=>{ const total=Object.values(obj).reduce((s,v)=>s+v,0)||1;
+    return Object.entries(obj).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`<div class="bar-row"><span class="nm" title="${esc(labelFn(k))}">${esc(labelFn(k))}</span><div class="tr"><div class="fl" style="width:${Math.max(3,v/total*100)}%"></div></div><b>${v}</b></div>`).join('')||'<div class="muted small">Нет данных</div>'; };
+  main.innerHTML=`<div class="page-head"><div><h1>Аналитика</h1><p>${a.team?'Командная аналитика':'Аналитика по доступным вам обращениям'} · ${a.visible_total} обращений</p></div></div>
+    <div class="stats">
+      <div class="stat"><div class="v">${a.processing.total_processed}</div><div class="l">Запусков триажа в сессии</div></div>
+      <div class="stat"><div class="v">${a.processing.escalation_rate_pct}%</div><div class="l">Доля needs_human по ИИ</div></div>
+      <div class="stat"><div class="v">${a.processing.avg_processing_time_ms} / ${a.processing.p95_processing_time_ms}</div><div class="l">Среднее / p95, мс (лимит p95 ≤ 5000)</div></div>
+      <div class="stat"><div class="v">$${Number(a.processing.avg_cost_usd||0).toFixed(4)}</div><div class="l">Стоимость на обращение (лимит $0.002)</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>По статусам</h2>${bars(a.by_status,k=>S.meta.statuses[k]||k)}</div>
+      <div class="card"><h2>По приоритетам</h2>${bars(a.by_priority,k=>PRIO[k]||k)}</div>
+      <div class="card" style="grid-column:1/-1"><h2>По категориям</h2>${bars(a.by_category,catName)}</div>
+    </div>
+    ${a.team?`<div class="table-wrap" style="margin-top:14px"><table><caption>Команда</caption><thead><tr><th scope="col"><span class="th">Сотрудник</span></th><th scope="col"><span class="th">Роль</span></th><th scope="col"><span class="th">Открытые</span></th><th scope="col"><span class="th">Завершённые</span></th><th scope="col"><span class="th">Эскалаций</span></th><th scope="col"><span class="th">Действий</span></th></tr></thead>
+      <tbody>${a.team.map(u=>`<tr><td>${esc(u.name)}</td><td class="small">${u.role==='senior_admin'?'Старший':'Младший'}</td><td>${u.open}</td><td>${u.resolved}</td><td>${u.escalated_by}</td><td>${u.actions}</td></tr>`).join('')}</tbody></table></div>`
+      :'<p class="muted small" style="margin-top:12px">Командная аналитика доступна только старшему администратору.</p>'}`;
+};
+
+/* ===================== Audit ===================== */
+PAGES.audit=async(main)=>{
+  const senior=S.user.role==='senior_admin';
+  main.innerHTML=`<div class="page-head"><div><h1>История действий</h1><p>${senior?'Аудит действий всей команды.':'Ваши действия (журнал команды доступен старшему).'}</p></div></div>
+    <div class="filters"><select id="auA" class="select" aria-label="Действие"><option value="">Все действия</option>${Object.entries(ACTION_NAMES).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select>
+    ${senior?`<select id="auU" class="select" aria-label="Сотрудник"><option value="">Все сотрудники</option>${S.users.map(u=>`<option value="${esc(u.id)}">${esc(u.name)}</option>`).join('')}</select>`:''}</div><div id="auBox">${loadingHTML()}</div>`;
+  const load=async()=>{
+    const p=new URLSearchParams({limit:'300'}); if($('#auA').value) p.set('action',$('#auA').value); if(senior&&$('#auU').value) p.set('actor',$('#auU').value);
+    try{ const d=await api('GET','/api/ws/audit?'+p);
+      $('#auBox').innerHTML=d.entries.length?`<div class="table-wrap"><table><caption>Записей: ${d.count}</caption><thead><tr><th scope="col"><span class="th">Время</span></th><th scope="col"><span class="th">Автор</span></th><th scope="col"><span class="th">Действие</span></th><th scope="col"><span class="th">Тикет</span></th><th scope="col"><span class="th">Детали</span></th></tr></thead>
+        <tbody>${d.entries.map(e=>`<tr><td class="small">${fmtTime(e.ts)}</td><td>${esc(e.actor_name)} <span class="small muted">${e.actor_role==='senior_admin'?'старший':(e.actor_role==='junior_admin'?'младший':'')}</span></td><td>${esc(ACTION_NAMES[e.action]||e.action)}</td>
+          <td class="id">${e.ticket_id?`<a href="#junior/${encodeURIComponent(e.ticket_id)}">${esc(e.ticket_id)}</a>`:'—'}</td><td class="small muted">${detailsLine(e.details).replace(/^ · /,'')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="card empty">Записей нет.</div>';
+    }catch(e){ $('#auBox').innerHTML=errBox(e); }
+  };
+  $('#auA').onchange=load; if($('#auU')) $('#auU').onchange=load; await load();
+};
+
+/* ===================== Settings ===================== */
+PAGES.settings=async(main)=>{
+  let d;
+  try{ d=await api('GET','/api/ws/settings'); }
+  catch(e){ main.innerHTML=`<div class="page-head"><div><h1>Настройки</h1></div></div>${errBox(e)}`; return; }
+  main.innerHTML=`<div class="page-head"><div><h1>Настройки</h1><p>Доступно только старшему администратору (проверяется на backend).</p></div></div>
+  <div class="grid2"><form class="card" id="setForm"><h2>Политики очереди</h2>
+    <label class="check"><input type="checkbox" name="junior_can_view_unassigned" ${d.settings.junior_can_view_unassigned?'checked':''}> Младшие видят общую очередь без исполнителя</label>
+    <label class="check"><input type="checkbox" name="junior_can_send_without_review" ${d.settings.junior_can_send_without_review?'checked':''}> Младшие могут отправлять ответы без проверки, если ИИ не требует человека</label>
+    <label class="check"><input type="checkbox" checked disabled> Подтверждение наказания требует проверки доказательств человеком (не отключается)</label>
+    <div class="actions" style="margin-top:10px"><button class="btn primary" type="submit">${ic('save')}Сохранить</button></div></form>
+  <div class="card"><h2>Система</h2><div class="kv">
+    <div><span>Режим</span><b>${d.system.demo_mode?'DEMO (без аутентификации)':'production'}</b></div>
+    <div><span>LLM</span><b>${d.system.llm_enabled?'включена: '+esc(d.system.llm_model):'выключена (локальный генератор, $0)'}</b></div>
+    <div><span>Источник правил</span><b>${esc(d.system.rules_source)} · ${d.system.rules_count} пунктов</b></div>
+    <div><span>Ключи API</span><b>Хранятся только на сервере (.env)</b></div></div>
+    <div class="actions" style="margin-top:12px"><button class="btn danger" type="button" id="resetDemo">${ic('refresh')}Сбросить демо-данные</button></div></div></div>`;
+  $('#setForm').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
+    try{ await api('PUT','/api/ws/settings',{junior_can_view_unassigned:fd.get('junior_can_view_unassigned')==='on',junior_can_send_without_review:fd.get('junior_can_send_without_review')==='on'}); toast('Настройки сохранены'); }
+    catch(err){ toast(err.message,'error'); } };
+  $('#resetDemo').onclick=()=>openModal({title:'Сбросить демо-данные?',submit:'Сбросить',kind:'danger',body:'<p>Все тикеты, черновики и журнал будут пересозданы из исходного набора данных.</p>',
+    onSubmit:async()=>{ await api('POST','/api/ws/demo/reset'); toast('Демо-данные сброшены'); refreshCounts(); }});
+};
+
+/* ===================== Boot ===================== */
+async function loadIdentity(){
+  S.user=await api('GET','/api/ws/me');
+  $('#roleBadge').textContent=S.user.role_label;
+  $('#roleBadge').className='b '+(S.user.role==='senior_admin'?'p-critical':'b-lang');
+}
+async function boot(){
+  try{
+    S.users=await fetch('/api/ws/users',{headers:{'X-Demo-User':S.userId}}).then(r=>r.ok?r.json():Promise.reject(new Error('users')));
+  }catch(_){ S.userId='junior_1'; localStorage.setItem('gm_demo_user','junior_1'); S.users=await api('GET','/api/ws/users'); }
+  $('#userSelect').innerHTML=S.users.map(u=>`<option value="${esc(u.id)}" ${u.id===S.userId?'selected':''}>${esc(u.name)} — ${esc(u.role_label)}</option>`).join('');
+  $('#userSelect').onchange=async e=>{ S.userId=e.target.value; localStorage.setItem('gm_demo_user',S.userId); S.selectedId=null; S.assistant={result:null,mode:'text'};
+    await loadIdentity(); toast('Демо-роль: '+S.user.role_label,'warn'); await refreshCounts(); location.hash='#overview'; router(); };
+  S.meta=await api('GET','/api/ws/meta');
+  await loadIdentity();
+  await refreshCounts();
+  router();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && $('#modalBg').classList.contains('open')) closeModal();
+  if(e.key==='/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){ const s=$('#fq')||$('#rq')||$('#aInput'); if(s){ e.preventDefault(); s.focus(); } }
+});
+boot().catch(e=>{ $('#main').innerHTML=errBox(e); });
+</script>
+</body>
+</html>

@@ -1,20 +1,33 @@
-# Node / Dependencies
-node_modules/
-dist/
-build/
-
-# Environment variables
+# Environment variables and secrets
 .env
 .env.local
+.env.*.local
 
-# Python
+# Provided raw datasets (must NOT be committed to public repository)
+tickets_train.jsonl.gz
+tickets_train.jsonl
+tickets_valid.jsonl
+data/raw/
+pred.jsonl
+*.pred.jsonl
+data/workspace_state.json
+data/workspace_state.tmp
+
+# Python bytecode & virtual environments
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .venv/
 venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
 
-# OS / IDE
+# OS / IDE files
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+xakaton
+

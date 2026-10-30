@@ -1,0 +1,127 @@
+{
+  "_meta": {
+    "project": "Grand Mobile Support Copilot",
+    "version": "1.0.0",
+    "is_demo_schema": true,
+    "note": "Reference taxonomy for Grand Mobile support triage. Replace with production taxonomy.json if provided externally."
+  },
+  "categories": [
+    {
+      "id": "insult_toxicity",
+      "name": "Оскорбления и токсичное поведение",
+      "description": "Оскорбления игроков в текстовом или голосовом чате, неадекватное поведение, упоминание или оскорбление родных, межнациональная рознь, провокации.",
+      "default_priority": "medium",
+      "needs_human_default": true,
+      "related_rule_prefixes": ["2."],
+      "keywords": ["оскорб", "мат", "чат", "войс", "голос", "родн", "мать", "маму", "обозвал", "токсик", "розжиг", "балағат", "боқта", "haqorat", "so'k", "insult", "toxic", "abuse", "mute", "мут"]
+    },
+    {
+      "id": "rp_violation",
+      "name": "Нарушение правил RolePlay",
+      "description": "Нарушения РП-процесса: DM (убийство без причины), DB (убийство машиной), SK (убийство на спавне), TK (убийство своих), PG (PowerGaming), MG (MetaGaming), RK (RevengeKill), NonRP поведение/коп.",
+      "default_priority": "medium",
+      "needs_human_default": true,
+      "related_rule_prefixes": ["3."],
+      "keywords": ["дм", "дб", "ск", "тк", "пг", "мг", "рк", "нонрп", "нрп", "dm", "db", "sk", "tk", "pg", "mg", "rk", "nonrp", "nrp", "убил без причины", "задавил", "таран", "арест без рп", "коп", "спавн", "өлтірді", "o'ldirdi", "killed"]
+    },
+    {
+      "id": "scam_fraud",
+      "name": "Мошенничество и NonRP обман",
+      "description": "Обман при обмене имуществом, продаже авто/дома/бизнеса, кража игровой валюты или вещей путем введения в заблуждение.",
+      "default_priority": "high",
+      "needs_human_default": true,
+      "related_rule_prefixes": ["4."],
+      "keywords": ["обман", "скам", "развел", "развод", "кинул", "мошенник", "обмен", "сделка", "машин", "дом", "бизнес", "алдап", "алаяқ", "aldab", "firibgar", "scam", "fraud", "stole", "trade"]
+    },
+    {
+      "id": "cheating_exploits",
+      "name": "Читы, багоюз и стороннее ПО",
+      "description": "Использование читов, спидхака, телепорта, аимбота, сторонних скриптов, макросов или намеренное использование уязвимостей игры (багоюз, дюп).",
+      "default_priority": "critical",
+      "needs_human_default": true,
+      "related_rule_prefixes": ["5."],
+      "keywords": ["чит", "читер", "софт", "аим", "спидхак", "телепорт", "багоюз", "дюп", "гм", "бессмертие", "cheat", "hack", "aimbot", "speedhack", "exploit", "bug_abuse", "макрос"]
+    },
+    {
+      "id": "ban_appeal",
+      "name": "Обжалование наказания и разбан",
+      "description": "Запросы на снятие блокировки аккаунта (разбан), деморгана, варна или мута, несогласие с решением администратора, просьбы об амнистии.",
+      "default_priority": "high",
+      "needs_human_default": true,
+      "related_rule_prefixes": ["7."],
+      "keywords": ["разбан", "бан", "забанили", "блокировк", "амнисти", "обжалов", "несправедлив", "деморган", "варн", "unban", "banned", "appeal", "блок", "баннан шығару", "bandan chiqarish"]
+    },
+    {
+      "id": "billing_refund",
+      "name": "Донат и возврат средств",
+      "description": "Непришедший донат, ошибки оплаты, двойное списание, запросы на возврат денежных средств (refund) или донат-валюты (GC).",
+      "default_priority": "high",
+      "needs_human_default": true,
+      "related_rule_prefixes": ["6."],
+      "keywords": ["донат", "деньг", "возврат", "верните", "оплат", "чек", "списал", "рубл", "тенге", "сум", "карт", "refund", "donate", "payment", "money", "ақша", "қайтару", "pul", "qaytarish", "gc", "коин"]
+    },
+    {
+      "id": "account_recovery",
+      "name": "Проблемы с доступом и взлом аккаунта",
+      "description": "Утеря пароля, взлом аккаунта, передача/продажа аккаунта (ППВ), смена почты или двухфакторной аутентификации.",
+      "default_priority": "critical",
+      "needs_human_default": true,
+      "related_rule_prefixes": ["1."],
+      "keywords": ["взлом", "украли аккаунт", "пароль", "почт", "доступ", "восстанов", "2fa", "гугл аут", "ппв", "hacked", "account", "password", "recovery", "аккаунт ұрланды", "akkaunt o'g'irlandi"]
+    },
+    {
+      "id": "technical_bug",
+      "name": "Технические проблемы и баги",
+      "description": "Вылеты игры (краши), лаги, проблемы со входом на сервер, пропажа предметов из-за рестарта или технического сбоя.",
+      "default_priority": "medium",
+      "needs_human_default": false,
+      "related_rule_prefixes": ["8."],
+      "keywords": ["вылет", "краш", "баг", "лагает", "не заходит", "черный экран", "текстур", "пропал", "рестарт", "ошибка", "crash", "bug", "lag", "connection", "қате", "xato"]
+    },
+    {
+      "id": "gameplay_question",
+      "name": "Игровой вопрос и правила",
+      "description": "Вопросы по игровым механикам, командам, системам работ, фракциям, уровням, а также уточнение правил сервера без жалобы на конкретного игрока.",
+      "default_priority": "low",
+      "needs_human_default": false,
+      "related_rule_prefixes": ["1.", "3.", "8."],
+      "keywords": ["как ", "где ", "подскажите", "вопрос", "команд", "уровень", "работ", "фракци", "лицензи", "военный билет", "промокод", "қалай", "қайда", "сұрақ", "qanday", "qayerda", "savol", "how to", "where is", "question"]
+    },
+    {
+      "id": "spam_offtopic",
+      "name": "Спам, дубликат и оффтоп",
+      "description": "Повторные однотипные обращения (дубликаты), бессмысленный набор символов, флуд, реклама сторонних ресурсов или сообщения не по теме проекта.",
+      "default_priority": "low",
+      "needs_human_default": false,
+      "related_rule_prefixes": ["7.3"],
+      "keywords": ["аууу", "алло", "тест", "1111", "аааа", "спам", "купите", "продам гараж", "spam", "test", "asdf"]
+    }
+  ],
+  "priorities": [
+    {
+      "id": "critical",
+      "name": "Критический",
+      "sla_minutes": 15,
+      "criteria": "Взлом аккаунта (account_recovery), активное использование читов/дюпа (cheating_exploits), массовые сбои или списание средств без зачисления при наличии чека."
+    },
+    {
+      "id": "high",
+      "name": "Высокий",
+      "sla_minutes": 60,
+      "criteria": "Запросы на возврат средств/доната (billing_refund), обжалование блокировок (ban_appeal), мошенничество на имущество (scam_fraud), грубые оскорбления родных/розжиг с доказательствами."
+    },
+    {
+      "id": "medium",
+      "name": "Средний",
+      "sla_minutes": 240,
+      "criteria": "Стандартные жалобы на оскорбления в чате (insult_toxicity), нарушения РП-процесса (rp_violation), технические баги (technical_bug)."
+    },
+    {
+      "id": "low",
+      "name": "Низкий",
+      "sla_minutes": 720,
+      "criteria": "Обычные вопросы по геймплею и правилам (gameplay_question), спам, флуд и дубликаты обращений (spam_offtopic)."
+    }
+  ]
+}
+
