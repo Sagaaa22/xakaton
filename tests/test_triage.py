@@ -546,6 +546,368 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         self.assertEqual(macro_f1, 1.0)
 
 
+    # 12. Telegram-уведомления, распределение между админами, кнопки и напоминания
+    def test_12_telegram_notifications_callbacks_reminders_and_distribution(self) -> None:
+        # Escalated complaint should automatically trigger Telegram notification and assign an admin
+        st_1, data_1, _ = call_asgi(
+            app,
+            "POST",
+            "/triage",
+            {
+                "kind": "complaint",
+                "messages": [
+                    {
+                        "role": "player",
+                        "text": "Игрок ScammerPro [ID: 1042] обманул меня при обмене имущества на 1 сервере на 5 млн!",
+                        "attachments": 1,
+                    }
+                ],
+            },
+        )
+        self.assertEqual(st_1, 200)
+        res_1 = self._assert_valid_schema_and_rules(data_1)
+        self.assertIsNotNone(res_1.telegram_notification)
+        self.assertTrue(res_1.telegram_notification.get("assigned_admin_id"))
+        btns = [
+            b["text"]
+            for row in res_1.telegram_notification.get("inline_keyboard", [])
+            for b in row
+        ]
+        self.assertTrue(any("Принять жалобу" in t for t in btns))
+        self.assertTrue(any("Открыть жалобу" in t for t in btns))
+
+        # Check /api/telegram/status and /api/telegram/notifications
+        st_tg, data_tg, _ = call_asgi(app, "GET", "/api/telegram/status")
+        self.assertEqual(st_tg, 200)
+        self.assertGreaterEqual(data_tg["total_notifications"], 1)
+        self.assertTrue(len(data_tg["admins"]) >= 2)
+
+        st_nl, data_nl, _ = call_asgi(app, "GET", "/api/telegram/notifications")
+        self.assertEqual(st_nl, 200)
+        self.assertGreaterEqual(data_nl["count"], 1)
+        latest_tid = res_1.telegram_notification["ticket_id"]
+
+        # Test SLA Reminder check (max_age_minutes=0 forces reminder for unaccepted tickets)
+        st_rem, data_rem, _ = call_asgi(
+            app, "POST", "/api/telegram/check-reminders?max_age_minutes=0"
+        )
+        self.assertEqual(st_rem, 200)
+        self.assertGreaterEqual(data_rem["reminders_sent"], 1)
+
+        # Test inline button callback "Принять жалобу"
+        st_cb, data_cb, _ = call_asgi(
+            app,
+            "POST",
+            "/api/telegram/callback",
+            {"callback_data": f"accept_ticket:{latest_tid}", "admin_id": "senior_1", "admin_name": "Admin_Nurlan"},
+        )
+        self.assertEqual(st_cb, 200)
+        self.assertTrue(data_cb["ok"])
+        self.assertEqual(data_cb["notification"]["accepted_by_name"], "Admin_Nurlan")
+
+    # 13. Многоязычный ИИ (сленг, опечатки, смешение языков) и прямой вызов администратора
+    def test_13_multilingual_slang_typos_and_direct_admin_call(self) -> None:
+        # 13a. Typos, gaming slang, and inverted word order
+        st_slang, data_slang, _ = call_asgi(
+            app,
+            "POST",
+            "/triage",
+            {
+                "kind": "complaint",
+                "messages": [
+                    {
+                        "role": "player",
+                        "text": "адмен памагите пж чел Vanya_Cheat с читами спидхак и аимбот убил без причины дм на 2 серве фрапс есть",
+                        "attachments": 1,
+                    }
+                ],
+            },
+        )
+        self.assertEqual(st_slang, 200)
+        res_slang = self._assert_valid_schema_and_rules(data_slang)
+        self.assertEqual(res_slang.category, "cheating_exploits")
+        self.assertEqual(res_slang.subcategory, "cheats")
+        self.assertTrue(len(res_slang.facts.slang_or_typos_normalized) > 0)
+
+        # 13b. Direct live admin call in Russian, Kazakh, Uzbek, and English
+        direct_calls = [
+            ("ru", "Позовите пожалуйста живого администратора срочно, нужен человек!", "Здравствуйте"),
+            ("kk", "Тірі админ шақырыңызшы өтініш, маған оператор керек!", "Сәлеметсіз бе"),
+            ("uz", "Iltimos jonli admin chaqiring, menga haqiqiy operator kerak!", "Assalomu alaykum"),
+            ("en", "Please connect me to a live human admin right now!", "Hello"),
+        ]
+        last_ar_id = None
+        for expected_lang, text, expected_greeting in direct_calls:
+            st_dc, data_dc, _ = call_asgi(
+                app,
+                "POST",
+                "/triage",
+                {
+                    "kind": "question",
+                    "messages": [{"role": "player", "text": text, "attachments": 0}],
+                },
+            )
+            self.assertEqual(st_dc, 200)
+            res_dc = self._assert_valid_schema_and_rules(data_dc)
+            self.assertEqual(res_dc.language, expected_lang)
+            self.assertEqual(res_dc.intent, "admin_request")
+            self.assertTrue(res_dc.needs_human)
+            self.assertIsNotNone(res_dc.admin_request_id)
+            self.assertEqual(res_dc.admin_request_status, "WAITING")
+            self.assertIn(expected_greeting, res_dc.draft_response)
+            last_ar_id = res_dc.admin_request_id
+
+        # Lifecycle of direct admin request: WAITING -> ACCEPTED -> IN_PROGRESS -> COMPLETED
+        action_body = {"request_id": last_ar_id, "admin_id": "senior_1", "admin_name": "Admin_Dias"}
+        st_acc, data_acc, _ = call_asgi(
+            app, "POST", f"/api/admin-requests/{last_ar_id}/accept", action_body
+        )
+        self.assertEqual(st_acc, 200)
+        self.assertEqual(data_acc["admin_request"]["status"], "ACCEPTED")
+
+        st_start, data_start, _ = call_asgi(
+            app, "POST", f"/api/admin-requests/{last_ar_id}/start", action_body
+        )
+        self.assertEqual(st_start, 200)
+        self.assertEqual(data_start["admin_request"]["status"], "IN_PROGRESS")
+
+        st_comp, data_comp, _ = call_asgi(
+            app, "POST", f"/api/admin-requests/{last_ar_id}/complete", action_body
+        )
+        self.assertEqual(st_comp, 200)
+        self.assertEqual(data_comp["admin_request"]["status"], "COMPLETED")
+
+    # 14. Confidence Score, автоматическая обработка простых вопросов и детальные подкатегории
+    def test_14_confidence_score_subcategories_and_auto_handling(self) -> None:
+        # Simple gameplay question -> auto_handled=True, needs_human=False, high confidence_pct
+        st_q, data_q, _ = call_asgi(
+            app,
+            "POST",
+            "/triage",
+            {
+                "kind": "question",
+                "messages": [
+                    {
+                        "role": "player",
+                        "text": "Какой командой открыть навигатор /gps и меню персонажа /mm?",
+                        "attachments": 0,
+                    }
+                ],
+            },
+        )
+        self.assertEqual(st_q, 200)
+        res_q = self._assert_valid_schema_and_rules(data_q)
+        self.assertTrue(res_q.auto_handled)
+        self.assertFalse(res_q.needs_human)
+        self.assertGreater(res_q.confidence_pct, 50.0)
+
+        # Subcategory detection across PG, MG, Family Insult, Bug Abuse
+        subcat_cases = [
+            ("Игрок Oleg_Hero один пошел против пятерых вооруженных (ПГ / PowerGaming) на 3 сервере", "pg"),
+            ("Игрок Maks_Info использовал ООС информацию из дискорда в РП чате (МГ / MetaGaming)", "mg"),
+            ("Игрок Toxic_Kid оскорбил родных и упомянул маму в голосовом чате на 1 сервере", "family_insult"),
+            ("Игрок Bug_Master использовал багоюз и дюп виртов через текстуры гаража", "bug_abuse"),
+        ]
+        for msg_text, expected_subcat in subcat_cases:
+            req = TriageRequest(
+                kind="complaint",
+                messages=[MessageItem(role="player", text=msg_text, attachments=1)],
+            )
+            res = self.service.analyze(req)
+            self.assertEqual(res.subcategory, expected_subcat)
+            self.assertTrue(len(res.subcategory_name) > 2)
+
+    # 15. Защита от фейковых жалоб (противоречия, риск фрода, запрет авто-наказаний)
+    def test_15_antifraud_contradictions_and_no_auto_punishment(self) -> None:
+        st_f, data_f, _ = call_asgi(
+            app,
+            "POST",
+            "/triage",
+            {
+                "kind": "complaint",
+                "messages": [
+                    {
+                        "role": "player",
+                        "text": "Игрок Fake_Target обманул на 100кк на 2 сервере, скриншот приложил, но скриншотов нет, забаньте его срочно без проверки!",
+                        "attachments": 0,
+                    }
+                ],
+                "evidence_files": [
+                    {
+                        "filename": "proof.png",
+                        "ocr_text": "Grand Mobile Server #9 | Player: Other_Guy [ID: 105]",
+                    }
+                ],
+            },
+        )
+        self.assertEqual(st_f, 200)
+        res_f = self._assert_valid_schema_and_rules(data_f)
+        self.assertGreater(res_f.fraud_risk_score, 0)
+        self.assertTrue(len(res_f.fraud_reasons) > 0)
+
+        st_fs, data_fs, _ = call_asgi(app, "GET", "/api/fraud/stats")
+        self.assertEqual(st_fs, 200)
+        self.assertIn("stats", data_fs)
+        self.assertTrue(data_fs.get("automated_punishment_blocked"))
+
+        st_susp, data_susp, _ = call_asgi(app, "GET", "/api/fraud/suspicious")
+        self.assertEqual(st_susp, 200)
+        self.assertTrue(data_susp.get("automated_punishment_blocked"))
+
+    # 16. Поиск повторных нарушителей по игровому ID и никнейму + статус игрового API
+    def test_16_repeat_offenders_by_id_and_nickname_and_game_api(self) -> None:
+        # Search by numeric in-game ID (142 -> Ivan_Grozny)
+        st_id, data_id, _ = call_asgi(app, "GET", "/api/player-history/search?q=142")
+        self.assertEqual(st_id, 200)
+        self.assertTrue(data_id["found"])
+        self.assertEqual(data_id["nickname"], "Ivan_Grozny")
+        self.assertEqual(data_id["player_id"], 142)
+        self.assertTrue(data_id["is_repeat_offender"])
+        self.assertGreater(data_id["confirmed_violations"], 0)
+        self.assertIn("unconfirmed_complaints", data_id)
+        self.assertIn("punishment_history", data_id)
+        self.assertIn("game_api_connected", data_id)
+
+        # Search by nickname (ScammerPro -> player_id 1042)
+        st_nick, data_nick, _ = call_asgi(app, "GET", "/api/player-history/search?q=ScammerPro")
+        self.assertEqual(st_nick, 200)
+        self.assertTrue(data_nick["found"])
+        self.assertEqual(data_nick["player_id"], 1042)
+
+        # List all repeat offenders
+        st_ro, data_ro, _ = call_asgi(app, "GET", "/api/repeat-offenders")
+        self.assertEqual(st_ro, 200)
+        self.assertGreaterEqual(data_ro["count"], 3)
+        self.assertIn("api_status", data_ro)
+
+    # 17. Анализ доказательств (JPG, PNG, MP4, WEBM, OCR, сверка с текстом жалобы)
+    def test_17_evidence_analyzer_jpg_png_mp4_webm_ocr_and_comparison(self) -> None:
+        import base64
+        import struct
+
+        # Construct valid minimal PNG header (800x600) and MP4 ftyp header
+        png_bytes = (
+            b"\x89PNG\r\n\x1a\n"
+            + b"\x00\x00\x00\rIHDR"
+            + struct.pack(">II", 800, 600)
+            + b"\x08\x02\x00\x00\x00"
+        )
+        mp4_bytes = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom" + (b"\x00" * 512)
+
+        st_ev, data_ev, _ = call_asgi(
+            app,
+            "POST",
+            "/api/evidence/analyze",
+            {
+                "complaint_text": "На 5 сервере игрок ScammerPro [ID: 777] обманул меня на 2500000 руб при сделке",
+                "server": 5,
+                "offender_nickname": "ScammerPro",
+                "offender_id": 777,
+                "files": [
+                    {
+                        "filename": "screen_trade.png",
+                        "content_base64": base64.b64encode(png_bytes).decode("ascii"),
+                        "ocr_text": "Grand Mobile Server 5 | /time 18:45 | Игрок ScammerPro [777] предложил обмен 2500000 руб",
+                    },
+                    {
+                        "filename": "fraps_capture.mp4",
+                        "content_base64": base64.b64encode(mp4_bytes).decode("ascii"),
+                        "ocr_text": "Server #5 /time 18:46 ID: 777 ScammerPro",
+                    },
+                ],
+            },
+        )
+        self.assertEqual(st_ev, 200)
+        self.assertEqual(data_ev["files_count"], 2)
+        self.assertTrue(data_ev["has_image"])
+        self.assertTrue(data_ev["has_video"])
+        self.assertEqual(data_ev["files"][0]["resolution"], "800x600")
+        self.assertIn("ScammerPro", data_ev["extracted_nicknames"])
+        self.assertIn(777, data_ev["extracted_player_ids"])
+        self.assertEqual(data_ev["extracted_servers"], [5])
+        self.assertTrue(data_ev["has_time_stamp"])
+        self.assertTrue(data_ev["is_consistent"])
+
+        # Contradictory evidence (complaint claims Server 2, screenshot shows Server 9)
+        st_bad, data_bad, _ = call_asgi(
+            app,
+            "POST",
+            "/api/evidence/analyze",
+            {
+                "complaint_text": "На 2 сервере игрок Ivan_Test убил меня",
+                "server": 2,
+                "offender_nickname": "Ivan_Test",
+                "files": [
+                    {
+                        "filename": "wrong_server.jpg",
+                        "ocr_text": "Grand Mobile Server 9 | Other_Player [999]",
+                    }
+                ],
+            },
+        )
+        self.assertEqual(st_bad, 200)
+        self.assertFalse(data_bad["is_consistent"])
+        self.assertGreater(len(data_bad["contradictions"]), 0)
+
+    # 18. AI Admin Assistant, фильтры Dashboard и Feedback Loop
+    def test_18_ai_admin_assistant_dashboard_filters_and_feedback_loop(self) -> None:
+        st_t, data_t, _ = call_asgi(
+            app,
+            "POST",
+            "/triage",
+            {
+                "kind": "complaint",
+                "messages": [
+                    {
+                        "role": "player",
+                        "text": "Игрок Cheat_Master [ID: 666] летал на машине с читами (телепорт) на 4 сервере, видео есть",
+                        "attachments": 1,
+                    }
+                ],
+            },
+        )
+        self.assertEqual(st_t, 200)
+        res_t = self._assert_valid_schema_and_rules(data_t)
+        self.assertIsNotNone(res_t.ai_summary)
+        self.assertTrue(res_t.ai_summary["final_decision_by_human"])
+        self.assertTrue(len(res_t.ai_summary.get("similar_resolved_cases", [])) > 0)
+        self.assertTrue(len(res_t.ai_summary.get("decision_recommendations", [])) > 0)
+        self.assertTrue(len(res_t.ai_summary.get("response_variants", {})) > 0)
+
+        # Test Dashboard filters
+        st_flt, data_flt, _ = call_asgi(
+            app, "GET", "/api/tickets?category=cheating_exploits&subcategory=cheats"
+        )
+        self.assertEqual(st_flt, 200)
+        self.assertGreaterEqual(data_flt["count"], 1)
+        target_tid = data_flt["tickets"][0]["id"]
+
+        # Submit Admin Feedback Loop entry with correction
+        st_fb, data_fb, _ = call_asgi(
+            app,
+            "POST",
+            "/api/feedback",
+            {
+                "ticket_id": target_tid,
+                "admin_id": "senior_1",
+                "admin_name": "Admin_Alikhan",
+                "feedback_type": "wrong_category",
+                "ai_category": "rp_violation",
+                "correct_category": "cheating_exploits",
+                "ai_priority": "high",
+                "correct_priority": "critical",
+                "note": "Подтвержден спидхак и телепорт по видео",
+            },
+        )
+        self.assertEqual(st_fb, 200)
+        self.assertEqual(data_fb["status"], "recorded")
+        self.assertTrue(data_fb["feedback"].get("applied_to_model"))
+
+        st_fbl, data_fbl, _ = call_asgi(app, "GET", "/api/feedback")
+        self.assertEqual(st_fbl, 200)
+        self.assertGreaterEqual(data_fbl["stats"]["total_feedback"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
 

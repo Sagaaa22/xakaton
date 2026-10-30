@@ -26,6 +26,12 @@ from pydantic import BaseModel, Field
 
 from app.safety import SafetyGuard
 from app.schemas import TriageRequest
+from app.classifier import SUBCATEGORY_SPECS
+from app.admin_requests import admin_request_store
+from app.fraud_detector import fraud_detector
+from app.player_history import player_history_store
+from app.telegram_notifier import telegram_notifier
+from app.feedback import feedback_store
 
 JUNIOR = "junior_admin"
 SENIOR = "senior_admin"
@@ -82,7 +88,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
 
 # Ground-truth label fields from datasets must never leak into triage input/facts
 LABEL_KEYS = {"category", "priority", "label", "is_synthetic_demo"}
-STATE_VERSION = 2
+STATE_VERSION = 3
 
 
 def _now() -> str:
@@ -129,6 +135,7 @@ class WorkspaceStore:
         self.audit: List[Dict[str, Any]] = []
         self.settings: Dict[str, Any] = dict(DEFAULT_SETTINGS)
         self._load_or_seed()
+        self._ensure_demo_notifications_and_calls()
 
     # ---------- persistence ----------
     def _save(self) -> None:
@@ -165,6 +172,57 @@ class WorkspaceStore:
             self.settings = dict(DEFAULT_SETTINGS)
             self._seed()
             self._save()
+
+    def _ensure_demo_notifications_and_calls(self) -> None:
+        """Seed initial direct admin calls and Telegram notifications if stores are empty."""
+        if admin_request_store.get_stats()["total"] == 0:
+            ar1 = admin_request_store.create(
+                player_nickname="Timur_Almaty",
+                server=3,
+                context_messages=[
+                    {"role": "player", "text": "Позовите живого администратора срочно! Меня обманули при обмене гелика на 3 сервере, нужен человек а не бот!"}
+                ],
+                ticket_id="tkt_0004",
+                language="ru",
+            )
+            telegram_notifier.notify_direct_admin_call(ar1)
+
+            ar2 = admin_request_store.create(
+                player_nickname="Arman_Kz",
+                server=2,
+                context_messages=[
+                    {"role": "player", "text": "Сәлем, тірі админ шақырыңызшы, 2 серверде читер машиналарды жарып жүр!"}
+                ],
+                ticket_id="tkt_0008",
+                language="kk",
+            )
+            telegram_notifier.notify_direct_admin_call(ar2)
+
+        if len(telegram_notifier.list_notifications(limit=5)) <= 2:
+            count = 0
+            for tid, t in self.tickets.items():
+                tr = t.get("triage", {})
+                if tr.get("needs_human") and count < 4:
+                    facts = tr.get("facts", {})
+                    ai_sum = tr.get("ai_summary", {})
+                    telegram_notifier.notify_ticket_escalation(
+                        ticket_id=tid,
+                        player_nickname=facts.get("reporter_nickname"),
+                        player_id=facts.get("reporter_id"),
+                        offender_nickname=facts.get("offender_nickname"),
+                        offender_id=facts.get("offender_id"),
+                        server=facts.get("server"),
+                        category=tr.get("category", "rp_violation"),
+                        category_name=tr.get("category_name", "Нарушение правил"),
+                        subcategory=tr.get("subcategory_name"),
+                        priority=tr.get("priority", "high"),
+                        confidence=float(tr.get("confidence") or 0.75),
+                        ai_summary_text=ai_sum.get("summary", _player_text(t)[:180]),
+                        needs_human_reason=tr.get("needs_human_reason"),
+                        rule_ids=tr.get("rule_ids", []),
+                        fraud_risk_score=int(tr.get("fraud_risk_score") or 0),
+                    )
+                    count += 1
 
     # ---------- triage ----------
     def run_triage(self, kind: str, messages: List[Dict[str, Any]], ticket_id: Optional[str]) -> Dict[str, Any]:
@@ -220,9 +278,20 @@ class WorkspaceStore:
             self.tickets[tid] = ticket
             self._log(None, "ticket_imported", tid, {"source": Path(self.seed_path).name})
 
-            # Deterministic demo distribution across roles and statuses
+            # If AI auto-handled this safe simple request, mark it resolved automatically or keep in queue
             slot = i % 6
-            if slot == 1:
+            if triage.get("auto_handled") and slot in (0, 3):
+                ticket["status"] = "resolved"
+                ticket["review"] = {
+                    "action": "auto_resolved",
+                    "decision": "answered",
+                    "decision_label": "Автоматически обработано ИИ (высокий Confidence Score)",
+                    "basis": f"Confidence Score {triage.get('confidence_pct', 85)}%, безопасное обращение",
+                    "by": "ai_copilot",
+                    "by_name": "AI Copilot",
+                    "at": created,
+                }
+            elif slot == 1:
                 self._seed_assign(ticket, "junior_1")
             elif slot == 2:
                 self._seed_assign(ticket, "junior_2")
@@ -265,7 +334,7 @@ class WorkspaceStore:
             return True
         return (
             t.get("assignee") is None
-            and t["status"] in ("new", "returned")
+            and t["status"] in ("new", "returned", "resolved")
             and bool(self.settings.get("junior_can_view_unassigned", True))
         )
 
@@ -354,8 +423,14 @@ class WorkspaceStore:
     # ---------- views ----------
     def summary(self, t: Dict[str, Any]) -> Dict[str, Any]:
         tr = t.get("triage", {})
+        facts = tr.get("facts", {})
         assignee = DEMO_USERS.get(t.get("assignee") or "")
         text = _player_text(t)
+        conf = float(tr.get("confidence") or 0.0)
+        conf_pct = tr.get("confidence_pct") if tr.get("confidence_pct") is not None else int(round(conf * 100))
+        needs_human = bool(tr.get("needs_human"))
+        auto_handled = bool(tr.get("auto_handled")) if tr.get("auto_handled") is not None else (not needs_human and conf >= 0.70)
+        fraud_score = int(tr.get("fraud_risk_score") or 0)
         return {
             "id": t["id"],
             "created_at": t["created_at"],
@@ -363,15 +438,30 @@ class WorkspaceStore:
             "kind": t["kind"],
             "category": tr.get("category"),
             "category_name": tr.get("category_name"),
+            "subcategory": tr.get("subcategory"),
+            "subcategory_name": tr.get("subcategory_name"),
             "priority": tr.get("priority"),
             "language": tr.get("language"),
             "status": t["status"],
             "status_label": STATUSES.get(t["status"], t["status"]),
             "assignee": t.get("assignee"),
             "assignee_name": assignee["name"] if assignee else None,
-            "needs_human": bool(tr.get("needs_human")),
+            "needs_human": needs_human,
+            "auto_handled": auto_handled,
+            "routing_decision": tr.get("routing_decision") or ("auto_handled" if auto_handled else "human_admin"),
             "escalated": t["status"] == "escalated" or t.get("escalation") is not None,
-            "confidence": tr.get("confidence"),
+            "confidence": conf,
+            "confidence_pct": conf_pct,
+            "fraud_risk_score": fraud_score,
+            "fraud_risk_level": tr.get("fraud_risk_level", "low"),
+            "is_suspicious": fraud_score >= 30,
+            "intent": tr.get("intent"),
+            "intent_label": tr.get("intent_label"),
+            "admin_request_id": tr.get("admin_request_id"),
+            "offender_nickname": facts.get("offender_nickname"),
+            "offender_id": facts.get("offender_id"),
+            "reporter_nickname": facts.get("reporter_nickname"),
+            "server": facts.get("server"),
             "is_spam": tr.get("is_spam"),
             "is_duplicate": tr.get("is_duplicate"),
             "snippet": text[:160],
@@ -392,6 +482,7 @@ class WorkspaceStore:
         out["history"] = [e for e in self.audit if e["ticket_id"] == t["id"]]
         out["rule_verification"] = self.rule_verification(t.get("triage", {}))
         out["similar_tickets"] = self.find_similar(_player_text(t), exclude_id=t["id"])
+        out["feedback_entries"] = feedback_store.get_for_ticket(t["id"])
         return out
 
     def get(self, ticket_id: str) -> Dict[str, Any]:
@@ -492,11 +583,16 @@ def create_router(store: WorkspaceStore) -> APIRouter:
     async def users(user=Depends(get_current_user)):
         return [{**u, "role_label": ROLE_LABELS[u["role"]]} for u in DEMO_USERS.values()]
 
-    @router.get("/meta", summary="Справочники: категории, приоритеты, статусы, решения")
+    @router.get("/meta", summary="Справочники: категории, подкатегории, приоритеты, статусы, решения")
     async def meta(user=Depends(get_current_user)):
         tax = store.svc.taxonomy
+        subcats = [
+            {"id": sc["id"], "name": sc["name"], "parent": sc["parent"]}
+            for sc in SUBCATEGORY_SPECS
+        ]
         return {
             "categories": [{"id": c.id, "name": c.name} for c in tax.categories.values()],
+            "subcategories": subcats,
             "priorities": tax.priorities,
             "statuses": STATUSES,
             "decisions": DECISIONS,
@@ -521,15 +617,17 @@ def create_router(store: WorkspaceStore) -> APIRouter:
     # ---------- tickets ----------
     @router.get("/tickets", summary="Список тикетов с фильтрами и сортировкой")
     async def list_tickets(
-        scope: str = Query("all", description="all | mine | queue | escalations"),
+        scope: str = Query("all", description="all | mine | queue | escalations | auto_handled | admin_escalated | suspicious | admin_calls"),
         status: Optional[str] = None,
         category: Optional[str] = None,
+        subcategory: Optional[str] = None,
         priority: Optional[str] = None,
         language: Optional[str] = None,
+        handling_mode: Optional[str] = Query(None, description="auto | needs_human | suspicious | admin_call"),
         assignee: Optional[str] = Query(None, description="id пользователя или 'none'"),
         escalated: Optional[bool] = None,
         q: Optional[str] = None,
-        sort: str = Query("created_at", description="created_at | priority | category | status | language | id | assignee"),
+        sort: str = Query("created_at", description="created_at | priority | category | status | language | id | assignee | confidence"),
         order: str = Query("desc", description="asc | desc"),
         user=Depends(get_current_user),
     ):
@@ -545,11 +643,21 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                 items = [t for t in items if t["status"] == "escalated"]
             rows = [store.summary(t) for t in items]
 
+        if scope == "auto_handled" or handling_mode == "auto":
+            rows = [r for r in rows if r.get("auto_handled")]
+        elif scope == "admin_escalated" or handling_mode == "needs_human":
+            rows = [r for r in rows if r.get("needs_human")]
+        elif scope == "suspicious" or handling_mode == "suspicious":
+            rows = [r for r in rows if r.get("is_suspicious") or (r.get("fraud_risk_score") or 0) >= 30]
+        elif scope == "admin_calls" or handling_mode == "admin_call":
+            rows = [r for r in rows if r.get("intent") == "admin_request" or r.get("admin_request_id")]
+
         def f(rows, key, val):
             return [r for r in rows if r.get(key) == val] if val else rows
 
         rows = f(rows, "status", status)
         rows = f(rows, "category", category)
+        rows = f(rows, "subcategory", subcategory)
         rows = f(rows, "priority", priority)
         rows = f(rows, "language", language)
         if assignee == "none":
@@ -560,8 +668,15 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             rows = [r for r in rows if r["escalated"] == escalated]
         if q:
             ql = q.lower().strip()
-            rows = [r for r in rows if ql in r["id"].lower() or ql in (r["snippet"] or "").lower()
-                    or ql in (r["category_name"] or "").lower() or ql in (r["category"] or "").lower()]
+            rows = [
+                r for r in rows
+                if ql in r["id"].lower()
+                or ql in (r["snippet"] or "").lower()
+                or ql in (r["category_name"] or "").lower()
+                or ql in (r["subcategory_name"] or "").lower()
+                or ql in (r["offender_nickname"] or "").lower()
+                or ql in str(r.get("offender_id") or "")
+            ]
 
         keyfn = {
             "priority": lambda r: (PRIORITY_RANK.get(r["priority"], 0), r["created_at"]),
@@ -570,6 +685,7 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             "language": lambda r: r["language"] or "",
             "id": lambda r: r["id"],
             "assignee": lambda r: r["assignee_name"] or "",
+            "confidence": lambda r: r.get("confidence") or 0.0,
         }.get(sort, lambda r: r["created_at"])
         rows.sort(key=keyfn, reverse=(order != "asc"))
         return {"count": len(rows), "tickets": rows}
@@ -599,6 +715,7 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             t["status"] = "in_progress"
             store.touch(t)
             store._log(user, "take", ticket_id, {})
+            telegram_notifier.mark_ticket_accepted(ticket_id, user["id"], user["name"])
             store._save()
             return store.detail(user, t)
 
@@ -616,6 +733,7 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                 t["status"] = "in_progress"
             store.touch(t)
             store._log(user, "assign", ticket_id, {"from": prev, "to": target["id"], "to_name": target["name"]})
+            telegram_notifier.mark_ticket_accepted(ticket_id, target["id"], target["name"])
             store._save()
             return store.detail(user, t)
 
@@ -628,8 +746,11 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             t["draft"] = t["triage"]["draft_response"]
             store.touch(t)
             store._log(user, "retriage", ticket_id, {
-                "category": t["triage"]["category"], "priority": t["triage"]["priority"],
-                "rule_ids": t["triage"]["rule_ids"], "needs_human": t["triage"]["needs_human"],
+                "category": t["triage"]["category"],
+                "subcategory": t["triage"].get("subcategory"),
+                "priority": t["triage"]["priority"],
+                "rule_ids": t["triage"]["rule_ids"],
+                "needs_human": t["triage"]["needs_human"],
             })
             store._save()
             return store.detail(user, t)
@@ -686,6 +807,26 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             t["escalation"] = {"reason": body.reason.strip(), "by": user["id"], "by_name": user["name"], "at": _now()}
             store.touch(t)
             store._log(user, "escalate", ticket_id, {"reason": body.reason.strip()})
+            tr = t.get("triage", {})
+            facts = tr.get("facts", {})
+            telegram_notifier.notify_ticket_escalation(
+                ticket_id=ticket_id,
+                player_nickname=facts.get("reporter_nickname"),
+                player_id=facts.get("reporter_id"),
+                offender_nickname=facts.get("offender_nickname"),
+                offender_id=facts.get("offender_id"),
+                server=facts.get("server"),
+                category=tr.get("category", "rp_violation"),
+                category_name=tr.get("category_name", "Эскалация"),
+                subcategory=tr.get("subcategory_name"),
+                priority=tr.get("priority", "high"),
+                confidence=float(tr.get("confidence") or 0.75),
+                ai_summary_text=f"Эскалировано оператором {user['name']}: {body.reason.strip()}",
+                needs_human_reason=body.reason.strip(),
+                rule_ids=tr.get("rule_ids", []),
+                fraud_risk_score=int(tr.get("fraud_risk_score") or 0),
+                preferred_admin_id="senior_1",
+            )
             store._save()
             return store.detail(user, t)
 
@@ -736,6 +877,22 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                         )
                     if not body.rule_ids:
                         raise _bad_request("Для подтверждения нарушения укажите хотя бы один пункт rules.json")
+                    # Record confirmed violation in Repeat Offender store
+                    facts = tr.get("facts", {})
+                    off_nick = facts.get("offender_nickname")
+                    off_id = facts.get("offender_id")
+                    if off_nick or off_id:
+                        player_history_store.record_complaint_against(
+                            offender_nickname=off_nick or f"ID_{off_id}",
+                            ticket_id=ticket_id,
+                            category=tr.get("category", "rp_violation"),
+                            confirmed=True,
+                            offender_id=off_id,
+                            rule_id=body.rule_ids[0],
+                            punishment_type=f"Санкция по п. {', '.join(body.rule_ids)} ({basis[:60]})",
+                            admin_name=user["name"],
+                            server=facts.get("server") if isinstance(facts.get("server"), int) else None,
+                        )
                 if body.reply_text:
                     safety_check(body.reply_text, t)
                     t["messages"].append({"role": "admin", "text": body.reply_text, "attachments": 0, "author": user["id"], "at": _now(), "type": "reply"})
@@ -816,20 +973,46 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             return store.detail(user, t)
 
     # ---------- analytics, audit, settings ----------
-    @router.get("/analytics", summary="Аналитика (командная — только старшему)")
+    @router.get("/analytics", summary="Аналитика и сводка Dashboard")
     async def analytics(user=Depends(get_current_user)):
         with store.lock:
             visible = [t for t in store.tickets.values() if store.can_view(user, t)]
             by_status: Dict[str, int] = {}
             by_category: Dict[str, int] = {}
+            by_subcategory: Dict[str, int] = {}
             by_priority: Dict[str, int] = {}
+            confidences: List[float] = []
+            auto_handled_count = 0
+            admin_escalated_count = 0
+            suspicious_tickets_count = 0
+
             for t in visible:
                 by_status[t["status"]] = by_status.get(t["status"], 0) + 1
-                c = t["triage"].get("category")
+                tr = t.get("triage", {})
+                c = tr.get("category")
                 by_category[c] = by_category.get(c, 0) + 1
-                p = t["triage"].get("priority")
+                sc = tr.get("subcategory_name") or tr.get("subcategory")
+                if sc:
+                    by_subcategory[sc] = by_subcategory.get(sc, 0) + 1
+                p = tr.get("priority")
                 by_priority[p] = by_priority.get(p, 0) + 1
+                conf = float(tr.get("confidence") or 0.0)
+                confidences.append(conf)
+                if tr.get("auto_handled") or (not tr.get("needs_human") and conf >= 0.70):
+                    auto_handled_count += 1
+                if tr.get("needs_human"):
+                    admin_escalated_count += 1
+                if (tr.get("fraud_risk_score") or 0) >= 30:
+                    suspicious_tickets_count += 1
+
             open_items = [t for t in visible if t["status"] not in FINAL_STATUSES]
+            avg_conf_pct = round((sum(confidences) / len(confidences)) * 100.0, 1) if confidences else 0.0
+            fb_stats = feedback_store.get_stats()
+            ar_stats = admin_request_store.get_stats()
+            fraud_stats = fraud_detector.get_statistics()
+            repeat_offenders = player_history_store.get_repeat_offenders(min_complaints=2, limit=20)
+            tg_status = telegram_notifier.get_status()
+
             result = {
                 "visible_total": len(visible),
                 "my_open": sum(1 for t in open_items if t.get("assignee") == user["id"]),
@@ -837,8 +1020,23 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                 "escalations_open": sum(1 for t in visible if t["status"] == "escalated"),
                 "critical_open": sum(1 for t in open_items if t["triage"].get("priority") == "critical"),
                 "needs_human_open": sum(1 for t in open_items if t["triage"].get("needs_human")),
+                # New Dashboard KPIs (Requirement 10)
+                "auto_handled_count": auto_handled_count,
+                "admin_escalated_count": admin_escalated_count,
+                "direct_admin_calls_total": ar_stats["total"],
+                "direct_admin_calls_waiting": ar_stats["waiting"],
+                "suspicious_complaints_count": max(suspicious_tickets_count, fraud_stats["suspicious_flagged"]),
+                "repeat_offenders_count": len(repeat_offenders),
+                "ai_effectiveness": {
+                    "avg_confidence_pct": avg_conf_pct,
+                    "auto_handled_rate_pct": round((auto_handled_count / len(visible)) * 100.0, 1) if visible else 0.0,
+                    "feedback_accuracy_pct": fb_stats.get("accuracy_pct"),
+                    "feedback_total": fb_stats.get("total_feedback", 0),
+                    "telegram_notifications_sent": tg_status.get("notifications_total", 0),
+                },
                 "by_status": by_status,
                 "by_category": by_category,
+                "by_subcategory": by_subcategory,
                 "by_priority": by_priority,
                 "processing": {k: v for k, v in store.svc.get_analytics_summary().items()
                                if k in ("total_processed", "avg_processing_time_ms", "p95_processing_time_ms", "avg_cost_usd", "escalation_rate_pct")},
@@ -888,6 +1086,8 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                 "rules_source": store.svc.rag.rules_path.name,
                 "rules_count": len(store.svc.rag.rules_by_id),
                 "punishment_requires_human_evidence": True,
+                "telegram_status": telegram_notifier.get_status(),
+                "grand_mobile_api_status": player_history_store.get_api_status(),
             },
         }
 
@@ -905,6 +1105,7 @@ def create_router(store: WorkspaceStore) -> APIRouter:
     async def demo_reset(user=Depends(get_current_user)):
         require_senior(user)
         store.reset()
+        store._ensure_demo_notifications_and_calls()
         with store.lock:
             store._log(user, "demo_reset", None, {})
             store._save()

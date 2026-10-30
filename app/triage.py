@@ -1,9 +1,11 @@
 """
 End-to-end Triage Service orchestrating extraction, classification, RAG over rules,
-intent recognition, fraud detection, admin call handling, player history lookup,
-AI admin copilot summaries, safety verification, and privacy-preserving analytics.
+intent recognition, evidence analysis (OCR & video frames), fraud detection,
+direct admin call handling, Telegram notifications, player history lookup (ID & nickname),
+AI admin copilot summaries, safety verification, feedback loop, and privacy-preserving analytics.
 """
 import logging
+import math
 import time
 from typing import Any, Dict, List, Optional
 import uuid
@@ -20,6 +22,9 @@ from app.fraud_detector import fraud_detector
 from app.admin_requests import admin_request_store
 from app.player_history import player_history_store
 from app.admin_copilot import AdminCopilot
+from app.evidence_analyzer import evidence_analyzer
+from app.telegram_notifier import telegram_notifier
+from app.feedback import feedback_store
 
 logger = logging.getLogger("grand_mobile_copilot")
 
@@ -51,12 +56,21 @@ class TriageService:
         )
         self.generator = DraftGenerator(llm_client=llm_client)
 
+        # Register Feedback Loop -> Classifier weight updater
+        feedback_store.register_model_updater(self.classifier.apply_feedback)
+
+        self._recorded_ticket_ids: set = set()
+
         # Privacy-safe runtime analytics (no raw player PII stored in telemetry counters)
         self.analytics: Dict[str, Any] = {
             "total_processed": 0,
             "escalated_count": 0,
+            "auto_handled_count": 0,
+            "admin_calls_count": 0,
+            "suspicious_count": 0,
             "senior_escalated_ids": set(),
             "category_counts": {cid: 0 for cid in self.taxonomy.valid_categories},
+            "subcategory_counts": {},
             "priority_counts": {pid: 0 for pid in self.taxonomy.valid_priorities},
             "language_counts": {"ru": 0, "kk": 0, "uz": 0, "en": 0, "und": 0},
             "latencies_ms": [],
@@ -69,7 +83,6 @@ class TriageService:
         record_cache: bool = True,
     ) -> TriageResponse:
         start_ts = time.perf_counter()
-        # Lazily init AdminCopilot (needs fully-loaded rag + taxonomy)
         if not hasattr(self, "_copilot"):
             self._copilot = AdminCopilot(
                 rules_by_id=self.rag.rules_by_id,
@@ -110,12 +123,17 @@ class TriageService:
         else:
             reasons.append(f"Определен язык обращения: '{language}'")
 
+        if facts.slang_or_typos_normalized:
+            reasons.append(
+                f"Распознан игровой сленг/опечатки: {', '.join(facts.slang_or_typos_normalized[:4])}"
+            )
+
         if facts.unknown_mentioned_rules:
             reasons.append(
                 f"Игрок сослался на несуществующий в rules.json пункт правил: {', '.join(facts.unknown_mentioned_rules)}"
             )
 
-        # 3. Category & Priority Classification (strictly within taxonomy.json)
+        # 3. Category, Subcategory & Priority Classification
         category, priority, confidence, cls_reasons = self.classifier.classify(
             text=combined_player_text,
             kind=request.kind or "complaint",
@@ -125,6 +143,15 @@ class TriageService:
         )
         reasons.extend(cls_reasons)
 
+        subcategory, subcategory_name = self.classifier.detect_subcategory(
+            text=combined_player_text,
+            category=category,
+        )
+        confidence_pct = int(round(confidence * 100))
+        reasons.append(
+            f"Подкатегория классификации: «{subcategory_name}» ({subcategory}), Confidence Score: {confidence_pct}%"
+        )
+
         # 4. RAG Retrieval over rules.json
         cited_rules, _, unknown_rules, has_reliable_rule = self.rag.retrieve(
             query_text=combined_player_text,
@@ -133,7 +160,6 @@ class TriageService:
             top_k=3,
         )
 
-        # If complaint has insufficient evidence, include rule 7.2 (evidence policy) if present in rules.json
         if (
             not facts.has_evidence
             and category in ("insult_toxicity", "rp_violation", "scam_fraud", "cheating_exploits")
@@ -153,7 +179,6 @@ class TriageService:
                     )
                 )
 
-        # If spam or duplicate, include rule 7.3 (spam/duplicate policy) if present in rules.json
         if (
             (is_spam or is_duplicate or category == "spam_offtopic")
             and self.rag.is_valid_rule_id("7.3")
@@ -172,7 +197,6 @@ class TriageService:
                 ),
             )
 
-        # Strict verification that every cited rule ID exists in rules.json
         cited_rules = [r for r in cited_rules if self.rag.is_valid_rule_id(r.id)]
         rule_ids = self.rag.verify_rule_ids([r.id for r in cited_rules])
 
@@ -181,7 +205,41 @@ class TriageService:
         else:
             reasons.append("Надежного подтверждения в rules.json не найдено")
 
-        # 5. Determine `needs_human` and `needs_human_reason`
+        # 5. Evidence Analysis (JPG, PNG, MP4, WEBM, OCR & cross-check with complaint text)
+        ev_files: List[Dict[str, Any]] = []
+        if request.evidence_files:
+            for f in request.evidence_files:
+                ev_files.append(f.dict() if hasattr(f, "dict") else dict(f))
+        for m in request.messages:
+            if isinstance(m.attachments, list):
+                for item in m.attachments:
+                    if isinstance(item, dict):
+                        ev_files.append(dict(item))
+                    elif isinstance(item, str) and item.strip():
+                        ev_files.append({"filename": item.strip()})
+
+        # If attachments count > 0 but no explicit file objects passed, synthesize descriptors from text/evidence_types
+        total_atts = sum(m.attachments_count for m in request.messages)
+        if not ev_files and total_atts > 0:
+            has_vid_type = any(t in facts.evidence_types for t in ("video_file", "video_mention"))
+            default_ext = "mp4" if has_vid_type else "png"
+            for idx in range(min(total_atts, 3)):
+                ev_files.append({"filename": f"attachment_{idx + 1}.{default_ext}"})
+
+        evidence_report = None
+        if ev_files or facts.has_evidence or category in ("insult_toxicity", "rp_violation", "scam_fraud", "cheating_exploits"):
+            evidence_report = evidence_analyzer.analyze_and_compare(
+                media_items=ev_files,
+                complaint_text=combined_player_text,
+                complaint_facts=facts.dict(),
+                category=category,
+            )
+            if evidence_report.get("contradictions"):
+                reasons.append(
+                    f"🔍 Проверка доказательств выявила расхождения: {'; '.join(evidence_report['contradictions'][:2])}"
+                )
+
+        # 6. Determine `needs_human` and `needs_human_reason`
         needs_human, needs_human_reason = self._evaluate_human_escalation(
             category=category,
             priority=priority,
@@ -194,23 +252,35 @@ class TriageService:
             is_duplicate=is_duplicate,
             player_text=combined_player_text,
         )
+        if evidence_report and not evidence_report.get("is_consistent", True):
+            needs_human = True
+            contradiction_str = "; ".join(evidence_report.get("contradictions", [])[:2])
+            needs_human_reason = (
+                f"{needs_human_reason}; Расхождение текста с доказательствами: {contradiction_str}"
+                if needs_human_reason
+                else f"Расхождение текста с доказательствами: {contradiction_str}"
+            )
+
         if needs_human and needs_human_reason:
             reasons.append(f"Требуется оператор: {needs_human_reason}")
+        elif not needs_human:
+            reasons.append(
+                f"Автоматическая обработка ИИ разрешена: высокая уверенность ({confidence_pct}%) и безопасная категория"
+            )
 
-        # 6. Intent Recognition
+        # 7. Intent Recognition
         intent, intent_conf, intent_signals = detect_intent(
             text=combined_player_text,
             category_hint=category,
         )
         intent_label = INTENT_LABELS.get(intent, intent)
-        requires_admin = INTENT_REQUIRES_ADMIN.get(intent, False)
+        requires_admin = bool(INTENT_REQUIRES_ADMIN.get(intent, False) or needs_human)
         if intent_signals:
-            reasons.append(f"Намерение игрока: {intent_label} (уверенность {int(intent_conf*100)}%)")
+            reasons.append(f"Намерение игрока: {intent_label} (уверенность {int(intent_conf * 100)}%)")
 
-        # 7. Fraud / Anti-fake Detection
+        # 8. Fraud / Anti-fake Detection (with evidence cross-check)
         reporter_nick = facts.reporter_nickname or (request.nickname if request.nickname else None)
         offender_nick = facts.offender_nickname or (request.offender_nickname if request.offender_nickname else None)
-        total_atts = sum(m.attachments_count for m in request.messages)
         fraud_result = fraud_detector.analyze(
             ticket_id=ticket_id,
             reporter=reporter_nick,
@@ -220,61 +290,96 @@ class TriageService:
             confidence=confidence,
             has_evidence=facts.has_evidence,
             attachments_count=total_atts,
-            server=request.server,
+            server=facts.server or request.server,
+            evidence_report=evidence_report,
         )
-        # Record in detector store for future cross-checks
-        fraud_detector.record_complaint(
-            ticket_id=ticket_id,
-            reporter=reporter_nick,
-            offender=offender_nick,
-            text=combined_player_text,
-            category=category,
-            server=request.server,
-        )
+        if ticket_id not in self._recorded_ticket_ids and not request.regenerate:
+            fraud_detector.record_complaint(
+                ticket_id=ticket_id,
+                reporter=reporter_nick,
+                offender=offender_nick,
+                text=combined_player_text,
+                category=category,
+                server=facts.server or request.server,
+                fraud_score=fraud_result["fraud_risk_score"],
+                reasons=fraud_result["reasons"],
+                contradictions=fraud_result.get("contradictions", []),
+            )
+
         if fraud_result["is_suspicious"] and not is_spam:
             reasons.append(
                 f"⚠️ Fraud Risk Score: {fraud_result['fraud_risk_score']}/100 ({fraud_result['risk_label']}). "
-                f"Требует ручной проверки. Не является доказательством вины."
+                f"Требует ручной проверки. Автоматические наказания строго заблокированы."
             )
             needs_human = True
             if not needs_human_reason:
-                needs_human_reason = "Обнаружены подозрительные паттерны жалобы — требуется ревью администратором"
+                needs_human_reason = "Обнаружены подозрительные паттерны или противоречия — требуется ревью администратором"
 
-        # 8. Player (Offender) History
+        # 9. Player (Offender) History by Nickname AND In-Game ID
         offender_history = None
-        if offender_nick:
-            offender_history = player_history_store.get_player_history(offender_nick)
-            player_history_store.record_complaint_against(
-                offender_nickname=offender_nick,
-                ticket_id=ticket_id,
-                category=category,
-            )
+        offender_id = facts.offender_id
+        if offender_nick or offender_id:
+            lookup_key = offender_nick or str(offender_id)
+            offender_history = player_history_store.get_player_history(lookup_key, player_id=offender_id)
+            if ticket_id not in self._recorded_ticket_ids and not request.regenerate:
+                player_history_store.record_complaint_against(
+                    offender_nickname=offender_nick or f"ID_{offender_id}",
+                    ticket_id=ticket_id,
+                    category=category,
+                    confirmed=False,
+                    offender_id=offender_id,
+                    server=facts.server if isinstance(facts.server, int) else None,
+                )
             if offender_history and offender_history.get("found") and offender_history.get("risk_level") in ("high", "critical"):
                 reasons.append(
-                    f"🔁 Повторный нарушитель: {offender_nick!r} (риск: {offender_history['risk_level']}, "
-                    f"жалоб: {offender_history.get('total_complaints', 0)})"
+                    f"🔁 Повторный нарушитель: {offender_history.get('nickname')} "
+                    f"[ID: {offender_history.get('player_id') or '—'}] "
+                    f"(подтверждено нарушений: {offender_history.get('confirmed_violations', 0)}, "
+                    f"всего жалоб: {offender_history.get('total_complaints', 0)})"
                 )
 
-        # 9. Admin Request Handling (player explicitly called for admin)
+        if not request.regenerate:
+            self._recorded_ticket_ids.add(ticket_id)
+
+        # 10. Direct Admin Call Handling (when player explicitly asks for a live human admin)
         admin_request_id = None
-        if intent == "admin_request" or requires_admin:
+        admin_request_status = None
+        if intent == "admin_request":
             existing_msgs = [m.dict() for m in request.messages]
             ar = admin_request_store.create(
-                player_nickname=reporter_nick,
-                server=request.server,
+                player_nickname=reporter_nick or f"Player_{facts.reporter_id or 'Guest'}",
+                server=facts.server or request.server,
                 context_messages=existing_msgs,
                 ticket_id=ticket_id,
                 language=language,
             )
             admin_request_id = ar["id"]
+            admin_request_status = ar["status"]
             reasons.append(
-                f"👤 Игрок запросил живого администратора → создан запрос {admin_request_id}"
+                f"👤 Игрок вызвал живого администратора → создано обращение {admin_request_id} (статус: Ожидание)"
             )
             needs_human = True
-            if not needs_human_reason:
-                needs_human_reason = "Игрок явно запросил помощь живого администратора"
+            requires_admin = True
+            needs_human_reason = "Прямой вызов живого администратора игроком"
+            if record_cache:
+                telegram_notifier.notify_direct_admin_call(ar)
 
-        # 10. Generate Safe Grounded Draft Response
+        # 11. Confidence Score & Auto-handling Routing
+        auto_handled = bool(not needs_human and confidence >= 0.70)
+        if auto_handled:
+            routing_decision = "auto_handled"
+        elif intent == "admin_request":
+            routing_decision = "live_admin_call"
+        elif (
+            priority == "critical"
+            or category in ("ban_appeal", "scam_fraud", "cheating_exploits", "account_recovery", "billing_refund")
+            or fraud_result["fraud_risk_score"] >= 60
+        ):
+            routing_decision = "senior_admin"
+        else:
+            routing_decision = "junior_admin"
+
+        # 12. Generate Safe Grounded Draft Response
         draft_response, cost_usd = self.generator.generate_draft(
             language=language,
             category=category,
@@ -286,6 +391,8 @@ class TriageService:
             is_duplicate=is_duplicate,
             needs_human=needs_human,
             reasons=reasons,
+            intent=intent,
+            admin_request_id=admin_request_id,
         )
 
         # Final guardrail verification on the outgoing draft
@@ -297,10 +404,11 @@ class TriageService:
         if not is_safe:
             reasons.append(f"Сработал защитный фильтр черновика: {', '.join(safety_violations)}")
             needs_human = True
+            auto_handled = False
             if not needs_human_reason:
                 needs_human_reason = "Черновик требует ручной проверки безопасности оператором"
 
-        # 11. AI Admin Copilot Summary
+        # 13. AI Admin Copilot Summary
         ai_summary = self._copilot.generate_summary(
             ticket_id=ticket_id,
             original_text=combined_player_text,
@@ -313,25 +421,59 @@ class TriageService:
             needs_human_reason=needs_human_reason,
             fraud_risk_score=fraud_result["fraud_risk_score"],
             intent=intent,
+            subcategory=subcategory,
+            subcategory_name=subcategory_name,
+            evidence_report=evidence_report,
+            offender_history=offender_history,
         )
+
+        # 14. Telegram Notification for Complaints Requiring Admin Intervention
+        telegram_notification = None
+        if needs_human and intent != "admin_request" and record_cache and not request.regenerate:
+            cat_name_for_tg = (
+                self.taxonomy.categories[category].name
+                if category in self.taxonomy.categories
+                else category
+            )
+            telegram_notification = telegram_notifier.notify_ticket_escalation(
+                ticket_id=ticket_id,
+                player_nickname=reporter_nick,
+                player_id=facts.reporter_id,
+                offender_nickname=offender_nick,
+                offender_id=facts.offender_id,
+                server=facts.server or request.server,
+                category=category,
+                category_name=cat_name_for_tg,
+                subcategory=subcategory_name,
+                priority=priority,
+                confidence=confidence,
+                ai_summary_text=ai_summary.get("summary", ""),
+                needs_human_reason=needs_human_reason,
+                rule_ids=rule_ids,
+                fraud_risk_score=fraud_result["fraud_risk_score"],
+            )
 
         elapsed_ms = round((time.perf_counter() - start_ts) * 1000.0, 2)
 
         # Update privacy-safe metrics
         self._record_metrics(
             category=category,
+            subcategory=subcategory,
             priority=priority,
             language=language,
             needs_human=needs_human,
+            auto_handled=auto_handled,
+            is_admin_call=(intent == "admin_request"),
+            is_suspicious=fraud_result["is_suspicious"],
             elapsed_ms=elapsed_ms,
             cost_usd=cost_usd,
         )
 
-        # Log processing time without personal data (no nicknames or raw message text)
         logger.info(
-            "triage_completed ticket_id=%s category=%s priority=%s lang=%s needs_human=%s rules=%s latency_ms=%.2f",
+            "triage_completed ticket_id=%s category=%s subcategory=%s priority=%s lang=%s needs_human=%s rules=%s latency_ms=%.2f",
             ticket_id,
             category,
+            subcategory,
             priority,
             language,
             needs_human,
@@ -350,6 +492,8 @@ class TriageService:
             language=language,
             category=category,
             category_name=cat_name,
+            subcategory=subcategory,
+            subcategory_name=subcategory_name,
             priority=priority,
             is_spam=is_spam,
             is_duplicate=is_duplicate,
@@ -360,10 +504,12 @@ class TriageService:
             needs_human=needs_human,
             needs_human_reason=needs_human_reason,
             confidence=confidence,
+            confidence_pct=confidence_pct,
+            auto_handled=auto_handled,
+            routing_decision=routing_decision,
             reasons=reasons,
             processing_time_ms=elapsed_ms,
             cost_usd=cost_usd,
-            # New AI feature fields
             intent=intent,
             intent_label=intent_label,
             intent_confidence=round(intent_conf, 3),
@@ -373,8 +519,11 @@ class TriageService:
             fraud_reasons=fraud_result["reasons"],
             fraud_related_tickets=fraud_result.get("related_tickets", []),
             admin_request_id=admin_request_id,
+            admin_request_status=admin_request_status,
             player_history=offender_history,
             ai_summary=ai_summary,
+            evidence_report=evidence_report,
+            telegram_notification=telegram_notification,
         )
 
     def _evaluate_human_escalation(
@@ -428,7 +577,7 @@ class TriageService:
                 )
         elif category == "technical_bug":
             lower = player_text.lower()
-            if any(w in lower for w in ("пропал", "исчез", "слетел", "потерял", "багажник", "тюнинг")):
+            if any(w in lower for w in ("пропал", "исчез", "слетел", "потерял", "багажник", "тюнинг", "жоғалды", "yo'qoldi")):
                 escalation_reasons.append(
                     "Заявлена пропажа игрового имущества из-за тех. сбоя — требуется проверка серверных логов (п. 8.1)"
                 )
@@ -446,7 +595,6 @@ class TriageService:
         if escalation_reasons:
             return True, "; ".join(escalation_reasons)
 
-        # Check taxonomy default if still False
         if category in self.taxonomy.categories and self.taxonomy.categories[category].needs_human_default:
             return True, f"Категория '{category}' по регламенту требует подтверждения оператором"
 
@@ -455,18 +603,33 @@ class TriageService:
     def _record_metrics(
         self,
         category: str,
+        subcategory: Optional[str],
         priority: str,
         language: str,
         needs_human: bool,
+        auto_handled: bool,
+        is_admin_call: bool,
+        is_suspicious: bool,
         elapsed_ms: float,
         cost_usd: float,
     ) -> None:
         self.analytics["total_processed"] += 1
         if needs_human:
             self.analytics["escalated_count"] += 1
+        if auto_handled:
+            self.analytics["auto_handled_count"] += 1
+        if is_admin_call:
+            self.analytics["admin_calls_count"] += 1
+        if is_suspicious:
+            self.analytics["suspicious_count"] += 1
+
         self.analytics["category_counts"][category] = (
             self.analytics["category_counts"].get(category, 0) + 1
         )
+        if subcategory:
+            self.analytics["subcategory_counts"][subcategory] = (
+                self.analytics["subcategory_counts"].get(subcategory, 0) + 1
+            )
         self.analytics["priority_counts"][priority] = (
             self.analytics["priority_counts"].get(priority, 0) + 1
         )
@@ -490,6 +653,7 @@ class TriageService:
             p95_ms = 0.0
 
         escalation_rate = round((self.analytics["escalated_count"] / total) * 100.0, 1) if total > 0 else 0.0
+        auto_rate = round((self.analytics["auto_handled_count"] / total) * 100.0, 1) if total > 0 else 0.0
         avg_cost = round(self.analytics["total_cost_usd"] / total, 6) if total > 0 else 0.0
 
         cat_list = [
@@ -503,19 +667,27 @@ class TriageService:
         ]
         cat_list.sort(key=lambda x: x["count"], reverse=True)
 
+        fb_stats = feedback_store.get_stats()
+
         return {
             "total_processed": total,
             "escalated_count": self.analytics["escalated_count"],
+            "auto_handled_count": self.analytics["auto_handled_count"],
+            "auto_handled_rate_pct": auto_rate,
+            "admin_calls_count": admin_request_store.get_stats()["total"],
+            "admin_calls_waiting": admin_request_store.get_waiting_count(),
+            "suspicious_count": fraud_detector.get_statistics()["suspicious_flagged"],
+            "repeat_offenders_count": len(player_history_store.get_repeat_offenders(min_complaints=2)),
             "senior_escalated_count": len(self.analytics["senior_escalated_ids"]),
             "escalation_rate_pct": escalation_rate,
             "avg_processing_time_ms": avg_ms,
             "p95_processing_time_ms": p95_ms,
             "avg_cost_usd": avg_cost,
+            "ai_accuracy_pct": fb_stats.get("accuracy_pct"),
+            "feedback_total": fb_stats.get("total_feedback", 0),
             "categories": cat_list,
+            "subcategories": self.analytics["subcategory_counts"],
             "priorities": self.analytics["priority_counts"],
             "languages": self.analytics["language_counts"],
             "using_synthetic_data": settings.is_using_synthetic_train,
         }
-
-
-import math

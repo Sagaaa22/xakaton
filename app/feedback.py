@@ -1,13 +1,17 @@
 """
 Feedback Loop module for Grand Mobile Support Copilot.
-Collects admin corrections to improve AI classification quality.
-Does NOT trigger automatic retraining on unchecked data.
+Collects admin evaluations (correct vs error) and corrections to improve AI classification quality.
+Persists feedback entries and connects to `TicketClassifier.apply_feedback` to update model weights.
 """
-import logging
-import threading
-import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+import json
+import logging
+from pathlib import Path
+import threading
+from typing import Any, Callable, Dict, List, Optional
+import uuid
+
+from app.config import settings
 
 logger = logging.getLogger("grand_mobile_copilot.feedback")
 
@@ -27,25 +31,57 @@ FEEDBACK_TYPES = [
 ]
 
 FEEDBACK_TYPE_LABELS = {
-    "correct_classification": "✅ ИИ правильно классифицировал обращение",
-    "wrong_category": "❌ Неверная категория",
-    "wrong_priority": "❌ Неверный приоритет",
-    "wrong_rule": "❌ Неверно найден пункт правил",
+    "correct_classification": "✅ ИИ правильно проанализировал обращение",
+    "wrong_category": "❌ Ошибка категории",
+    "wrong_priority": "❌ Ошибка приоритета",
+    "wrong_rule": "❌ Неверно подобран пункт правил",
     "wrong_evidence_analysis": "❌ Ошибка анализа доказательств",
-    "wrong_confidence": "⚠️ Неверная оценка уверенности",
-    "intent_mismatch": "❌ Неверное намерение игрока",
+    "wrong_confidence": "⚠️ Неверная оценка уверенности (Confidence)",
+    "intent_mismatch": "❌ Неверно определено намерение игрока",
 }
 
 
 class FeedbackStore:
     """
-    Thread-safe storage for admin feedback on AI classifications.
-    Feedback is stored for quality review before any use in training.
+    Thread-safe storage for admin feedback on AI classifications with optional JSON persistence
+    and live classifier weight update callback.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, persist_path: Optional[Path] = None) -> None:
         self._feedback: List[Dict[str, Any]] = []
         self._lock = threading.RLock()
+        self.persist_path: Path = persist_path or (settings.root_dir / "data" / "feedback_store.json")
+        self._model_updater: Optional[Callable[[str, str, Optional[str], Optional[str]], bool]] = None
+        self._load()
+
+    def register_model_updater(
+        self,
+        updater: Callable[[str, str, Optional[str], Optional[str]], bool],
+    ) -> None:
+        """Register classifier weight update function: (text, kind, correct_cat, correct_prio) -> bool."""
+        self._model_updater = updater
+
+    def _load(self) -> None:
+        if not self.persist_path or not self.persist_path.exists():
+            return
+        try:
+            raw = json.loads(self.persist_path.read_text(encoding="utf-8"))
+            if isinstance(raw, list):
+                self._feedback = raw
+        except Exception:
+            pass
+
+    def _save(self) -> None:
+        if not self.persist_path:
+            return
+        try:
+            self.persist_path.parent.mkdir(parents=True, exist_ok=True)
+            self.persist_path.write_text(
+                json.dumps(self._feedback, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
 
     def record(
         self,
@@ -60,11 +96,26 @@ class FeedbackStore:
         ai_rule_ids: List[str],
         correct_rule_ids: Optional[List[str]],
         note: Optional[str] = None,
+        ticket_text: Optional[str] = None,
+        apply_to_model: bool = True,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
-        """Record admin feedback on an AI decision."""
+        """Record admin feedback on an AI decision and optionally update classifier weights."""
         if feedback_type not in FEEDBACK_TYPES:
             feedback_type = "correct_classification"
-        
+
+        applied_to_classifier = False
+        if apply_to_model and self._model_updater and ticket_text:
+            target_cat = correct_category or (ai_category if feedback_type == "correct_classification" else None)
+            target_prio = correct_priority or (ai_priority if feedback_type == "correct_classification" else None)
+            if target_cat or target_prio:
+                try:
+                    applied_to_classifier = bool(
+                        self._model_updater(ticket_text, "complaint", target_cat, target_prio)
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to apply feedback to classifier: %s", exc)
+
         feedback_id = f"fb_{uuid.uuid4().hex[:8]}"
         entry = {
             "id": feedback_id,
@@ -74,44 +125,51 @@ class FeedbackStore:
             "feedback_type": feedback_type,
             "feedback_label": FEEDBACK_TYPE_LABELS.get(feedback_type, feedback_type),
             "ai_category": ai_category,
-            "correct_category": correct_category,
+            "correct_category": correct_category or ai_category,
             "ai_priority": ai_priority,
-            "correct_priority": correct_priority,
+            "correct_priority": correct_priority or ai_priority,
             "ai_rule_ids": ai_rule_ids,
-            "correct_rule_ids": correct_rule_ids,
+            "correct_rule_ids": correct_rule_ids if correct_rule_ids is not None else ai_rule_ids,
             "note": note,
             "created_at": _now(),
-            "reviewed": False,  # Must be reviewed before using for training
+            "reviewed": True if applied_to_classifier else False,
+            "applied_to_model": applied_to_classifier,
         }
-        
+
         with self._lock:
             self._feedback.append(entry)
-        
+            self._save()
+
         logger.info(
-            "feedback_recorded id=%s ticket=%s type=%s admin=%s",
-            feedback_id, ticket_id, feedback_type, admin_name
+            "feedback_recorded id=%s ticket=%s type=%s admin=%s applied=%s",
+            feedback_id,
+            ticket_id,
+            feedback_type,
+            admin_name,
+            applied_to_classifier,
         )
         return entry
 
+    def get_for_ticket(self, ticket_id: str) -> List[Dict[str, Any]]:
+        with self._lock:
+            return [dict(f) for f in self._feedback if f.get("ticket_id") == ticket_id]
+
     def list_all(self, reviewed_only: bool = False, limit: int = 100) -> List[Dict[str, Any]]:
-        """List all feedback records."""
         with self._lock:
             items = list(self._feedback)
-        
         if reviewed_only:
             items = [f for f in items if f.get("reviewed")]
-        
         items.sort(key=lambda x: x["created_at"], reverse=True)
         return items[:limit]
 
     def get_stats(self) -> Dict[str, Any]:
-        """Return statistics about collected feedback."""
         with self._lock:
             total = len(self._feedback)
             by_type: Dict[str, int] = {}
             correct_count = 0
             reviewed_count = 0
-            
+            applied_count = 0
+
             for fb in self._feedback:
                 t = fb.get("feedback_type", "unknown")
                 by_type[t] = by_type.get(t, 0) + 1
@@ -119,32 +177,37 @@ class FeedbackStore:
                     correct_count += 1
                 if fb.get("reviewed"):
                     reviewed_count += 1
-        
-        ai_accuracy = round(correct_count / total * 100, 1) if total > 0 else 0.0
-        
+                if fb.get("applied_to_model"):
+                    applied_count += 1
+
+        ai_accuracy = round(correct_count / total * 100, 1) if total > 0 else 100.0
+
         return {
             "total_feedback": total,
             "correct_classification": correct_count,
+            "errors_reported": total - correct_count,
             "ai_accuracy_pct": ai_accuracy,
+            "accuracy_pct": ai_accuracy,
             "by_type": by_type,
             "reviewed_count": reviewed_count,
             "unreviewed_count": total - reviewed_count,
+            "applied_to_model_count": applied_count,
             "ready_for_training": reviewed_count,
-            "notice": "Данные обратной связи проходят проверку качества перед использованием для обучения модели",
+            "category_corrections": self.get_category_corrections(),
+            "notice": "Обратная связь администраторов сохраняется и используется для дообучения весов классификатора.",
         }
 
     def mark_reviewed(self, feedback_id: str) -> bool:
-        """Mark a feedback entry as reviewed and ready for training."""
         with self._lock:
             for fb in self._feedback:
                 if fb["id"] == feedback_id:
                     fb["reviewed"] = True
                     fb["reviewed_at"] = _now()
+                    self._save()
                     return True
         return False
 
     def get_category_corrections(self) -> Dict[str, Dict[str, int]]:
-        """Get category correction patterns to understand AI weaknesses."""
         corrections: Dict[str, Dict[str, int]] = {}
         with self._lock:
             for fb in self._feedback:

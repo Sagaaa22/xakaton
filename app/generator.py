@@ -104,6 +104,8 @@ class DraftGenerator:
         is_duplicate: bool,
         needs_human: bool,
         reasons: List[str],
+        intent: Optional[str] = None,
+        admin_request_id: Optional[str] = None,
     ) -> Tuple[str, float]:
         """
         Generate safe operator draft response and return (draft_text, cost_usd).
@@ -151,6 +153,8 @@ class DraftGenerator:
             is_spam=is_spam,
             is_duplicate=is_duplicate,
             needs_human=needs_human,
+            intent=intent,
+            admin_request_id=admin_request_id,
         )
         return draft, 0.0
 
@@ -163,6 +167,8 @@ class DraftGenerator:
         is_spam: bool,
         is_duplicate: bool,
         needs_human: bool,
+        intent: Optional[str] = None,
+        admin_request_id: Optional[str] = None,
     ) -> str:
         top_rule: Optional[CitedRule] = cited_rules[0] if cited_rules else None
         rule_ids_str = ", ".join(f"п. {r.id}" for r in cited_rules) if cited_rules else ""
@@ -187,6 +193,37 @@ class DraftGenerator:
             )
             unknown_notice_en = (
                 f"Please note: the rule number you mentioned ({unk_list}) does not exist in the current server rules. "
+            )
+
+        # Direct call for live human administrator
+        if intent == "admin_request":
+            ar_ref = f" #{admin_request_id}" if admin_request_id else ""
+            if lang == "kk":
+                r_ref = f" (п. {top_rule.id})" if top_rule else ""
+                return (
+                    f"Сәлеметсіз бе! {unknown_notice_kk}Тірі әкімшіні қосу туралы сұранысыңыз{ar_ref} тіркелді{r_ref} "
+                    "және Telegram арқылы кезекші әкімшілерге жіберілді. Күйі: әкімшінің қосылуын күтуде. "
+                    "Маман жақын арада диалогқа қосылады."
+                )
+            if lang == "uz":
+                r_ref = f" ({top_rule.id}-band)" if top_rule else ""
+                return (
+                    f"Assalomu alaykum! {unknown_notice_uz}Jonli administratorni ulash bo'yicha so'rovingiz{ar_ref} qabul qilindi{r_ref} "
+                    "va Telegram orqali navbatchi administratorlarga yuborildi. Holat: administrator ulanishi kutilmoqda. "
+                    "Mutaxassis tez orada suhbatga qo'shiladi."
+                )
+            if lang == "en":
+                r_ref = f" (rule {top_rule.id})" if top_rule else ""
+                return (
+                    f"Hello! {unknown_notice_en}Your request to connect with a live administrator{ar_ref} has been created{r_ref} "
+                    "and sent to the on-duty admin team via Telegram. Status: waiting for an administrator to join. "
+                    "A specialist will connect to your ticket shortly."
+                )
+            r_ref = f" (регламент п. {top_rule.id})" if top_rule else ""
+            return (
+                f"Здравствуйте! {unknown_notice_ru}Ваш запрос на подключение живого администратора{ar_ref}{server_info} "
+                f"зарегистрирован{r_ref} и передан дежурным администраторам в Telegram. "
+                "Статус обращения: ожидание подключения администратора. Специалист подключится к диалогу в ближайшее время."
             )
 
         # --- KAZAKH (kk) ---
@@ -422,4 +459,3 @@ class DraftGenerator:
                 "просим предоставить дополнительные сведения: скриншот или видео с видимым временем (/time), номер сервера и точный никнейм/ID игрока. "
                 "Обращение также передано специалисту для возможной проверки серверных логов."
             )
-

@@ -1,6 +1,7 @@
 """Configuration loader for Grand Mobile Support Copilot."""
 import os
 from pathlib import Path
+from typing import Dict
 
 
 def _load_dotenv(dotenv_path: Path) -> None:
@@ -56,9 +57,41 @@ class Settings:
         self.llm_input_cost_per_1k: float = float(os.getenv("LLM_INPUT_COST_PER_1K", "0.00015"))
         self.llm_output_cost_per_1k: float = float(os.getenv("LLM_OUTPUT_COST_PER_1K", "0.00060"))
 
+        # Telegram Admin Notifications Configuration
+        self.telegram_enabled: bool = os.getenv("TELEGRAM_ENABLED", "true").lower() in ("1", "true", "yes")
+        self.telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+        self.telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+        self.telegram_admin_ids: Dict[str, str] = self._parse_admin_ids(os.getenv("TELEGRAM_ADMIN_IDS", ""))
+        self.telegram_reminder_minutes: int = int(os.getenv("TELEGRAM_REMINDER_MINUTES", "15"))
+        self.dashboard_base_url: str = os.getenv("DASHBOARD_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+
+        # Grand Mobile Game Server API Configuration
+        self.grand_mobile_api_enabled: bool = os.getenv("GRAND_MOBILE_API_ENABLED", "false").lower() in ("1", "true", "yes")
+        self.grand_mobile_api_url: str = os.getenv("GRAND_MOBILE_API_URL", "").strip().rstrip("/")
+        self.grand_mobile_api_key: str = os.getenv("GRAND_MOBILE_API_KEY", "").strip()
+        self.grand_mobile_api_timeout: float = float(os.getenv("GRAND_MOBILE_API_TIMEOUT", "3.0"))
+
+        # Evidence & OCR Configuration
+        self.max_evidence_size_mb: int = int(os.getenv("MAX_EVIDENCE_SIZE_MB", "25"))
+        self.ocr_enabled: bool = os.getenv("OCR_ENABLED", "true").lower() in ("1", "true", "yes")
+        self.tesseract_cmd: str = os.getenv("TESSERACT_CMD", "").strip()
+
         self.host: str = os.getenv("HOST", "127.0.0.1")
         self.port: int = int(os.getenv("PORT", "8000"))
         self.log_level: str = os.getenv("LOG_LEVEL", "INFO")
+
+    @staticmethod
+    def _parse_admin_ids(raw: str) -> Dict[str, str]:
+        result: Dict[str, str] = {}
+        if not raw or not raw.strip():
+            return result
+        for pair in raw.split(","):
+            pair = pair.strip()
+            if ":" in pair:
+                k, v = pair.split(":", 1)
+                if k.strip() and v.strip():
+                    result[k.strip()] = v.strip()
+        return result
 
     def _resolve_path(self, primary: str, fallback: str) -> Path:
         p = Path(primary)
@@ -66,7 +99,6 @@ class Settings:
             p = self.root_dir / p
         if p.exists():
             return p
-        # Also check data/ subdirectory for primary filename
         alt = self.root_dir / "data" / Path(primary).name
         if alt.exists():
             return alt
@@ -85,4 +117,3 @@ class Settings:
 
 
 settings = Settings()
-

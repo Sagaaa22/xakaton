@@ -12,6 +12,7 @@ pred.jsonl
 *.pred.jsonl
 data/workspace_state.json
 data/workspace_state.tmp
+data/feedback_store.json
 
 # Python bytecode & virtual environments
 __pycache__/
@@ -30,4 +31,3 @@ Thumbs.db
 .vscode/
 .idea/
 xakaton
-

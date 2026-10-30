@@ -20,7 +20,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* Layout */
-.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto auto 1fr;min-height:100vh}
+.app{display:grid;grid-template-columns:255px 1fr;grid-template-rows:auto auto 1fr;min-height:100vh}
 .topbar{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
 .demo-strip{grid-column:1/3;background:rgba(245,158,11,.12);border-bottom:1px solid rgba(245,158,11,.35);color:#fcd34d;font-size:.82rem;padding:5px 20px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700}
@@ -29,13 +29,13 @@ button,input,select,textarea{font:inherit;color:inherit}
 .topbar .spacer{flex:1}
 .userbox{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text2)}
 .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:12px 10px;display:flex;flex-direction:column;gap:2px}
-.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--text2);font-size:.92rem}
+.nav-link{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;color:var(--text2);font-size:.88rem}
 .nav-link:hover{background:var(--card);color:var(--text)}
 .nav-link.active{background:rgba(99,102,241,.16);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
-.nav-link .count{margin-left:auto;background:var(--card2);border-radius:999px;padding:0 8px;font-size:.75rem;color:var(--text)}
+.nav-link .count{margin-left:auto;background:var(--card2);border-radius:999px;padding:0 8px;font-size:.73rem;color:var(--text)}
 .nav-link .count.hot{background:rgba(239,68,68,.25);color:#fecaca}
 .nav-link .lock{margin-left:auto;font-size:.72rem;color:var(--muted)}
-.nav-sep{height:1px;background:var(--border);margin:8px 4px}
+.nav-sep{height:1px;background:var(--border);margin:6px 4px}
 .main{padding:18px 22px;min-width:0;overflow:auto}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .page-head h1{font-size:1.35rem}
@@ -43,7 +43,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 svg.i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* Controls */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:.86rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:.85rem;font-weight:600;cursor:pointer;white-space:nowrap}
 .btn:hover:not(:disabled){background:var(--hover)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -51,15 +51,14 @@ svg.i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .btn.ok{background:rgba(16,185,129,.18);border-color:rgba(16,185,129,.5);color:#6ee7b7}
 .btn.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.5);color:#fca5a5}
 .btn.warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.45);color:#fcd34d}
-.btn.sm{padding:4px 9px;font-size:.8rem}
-.input,.select,.textarea{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;min-width:0}
+.btn.sm{padding:4px 9px;font-size:.78rem}
+.input,.select,.textarea{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.86rem;min-width:0}
 .textarea{width:100%;resize:vertical;line-height:1.5}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
-.filters .input{flex:1 1 220px}
-.kbd{font-family:monospace;font-size:.72rem;border:1px solid var(--border);border-radius:4px;padding:0 5px;color:var(--muted)}
+.filters .input{flex:1 1 200px}
 
 /* Badges */
-.b{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:6px;font-size:.76rem;font-weight:600;border:1px solid transparent;white-space:nowrap}
+.b{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:6px;font-size:.75rem;font-weight:600;border:1px solid transparent;white-space:nowrap}
 .p-critical{background:rgba(236,72,153,.18);color:#f9a8d4;border-color:rgba(236,72,153,.45)}
 .p-high{background:rgba(239,68,68,.18);color:#fca5a5;border-color:rgba(239,68,68,.45)}
 .p-medium{background:rgba(245,158,11,.16);color:#fcd34d;border-color:rgba(245,158,11,.4)}
@@ -73,35 +72,42 @@ svg.i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .s-closed{background:rgba(100,116,139,.25);color:#cbd5e1}
 .b-lang{background:rgba(59,130,246,.14);color:#93c5fd;text-transform:uppercase}
 .b-cat{background:rgba(139,92,246,.15);color:#ddd6fe}
+.b-subcat{background:rgba(56,189,248,.14);color:#bae6fd;border-color:rgba(56,189,248,.35)}
 .b-human{background:rgba(239,68,68,.18);color:#fecaca;border-color:rgba(239,68,68,.45)}
-.b-auto{background:rgba(16,185,129,.15);color:#a7f3d0}
+.b-auto{background:rgba(16,185,129,.15);color:#a7f3d0;border-color:rgba(16,185,129,.35)}
 .b-muted{background:var(--card2);color:var(--text2)}
 
 /* Cards & grids */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
 .card h2,.card h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:default}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;cursor:default}
 .stat a{display:block;color:inherit}
-.stat .v{font-size:1.7rem;font-weight:700}
-.stat .l{color:var(--text2);font-size:.8rem}
+.stat .v{font-size:1.55rem;font-weight:700}
+.stat .l{color:var(--text2);font-size:.78rem}
 .stat.hot{border-color:rgba(239,68,68,.5)}
+.stat.ok{border-color:rgba(16,185,129,.45)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .stack{display:flex;flex-direction:column;gap:12px}
-.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px}
 .kv div{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
 .kv span{display:block;font-size:.72rem;color:var(--muted)}
 .kv b{font-size:.86rem;font-weight:600;word-break:break-word}
 .muted{color:var(--text2)}
 .small{font-size:.8rem}
 
+/* Confidence bar */
+.conf-wrap{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+.conf-track{height:8px;background:var(--card2);border-radius:999px;overflow:hidden;margin-top:5px}
+.conf-fill{height:100%;border-radius:999px;transition:width .3s}
+
 /* Split view */
-.split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(380px,1fr);gap:14px;align-items:start}
+.split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(390px,1fr);gap:14px;align-items:start}
 .detail{position:sticky;top:0;max-height:calc(100vh - 150px);overflow:auto}
 
 /* Table */
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:auto}
-table{width:100%;border-collapse:collapse;font-size:.85rem}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
 caption{text-align:left;padding:10px 12px;color:var(--text2);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
 th{position:sticky;top:0;background:var(--card2);text-align:left;font-weight:600;color:var(--text2);padding:0;border-bottom:1px solid var(--border);white-space:nowrap}
 th button{background:none;border:0;padding:9px 10px;width:100%;text-align:left;cursor:pointer;color:inherit;font-weight:600}
@@ -111,12 +117,12 @@ tbody tr{cursor:pointer}
 tbody tr:hover{background:var(--hover)}
 tbody tr.sel{background:rgba(99,102,241,.14);box-shadow:inset 3px 0 0 var(--accent)}
 td.id{font-family:monospace;color:#c7d2fe;white-space:nowrap}
-.snip{color:var(--muted);font-size:.78rem;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;max-width:340px}
+.snip{color:var(--muted);font-size:.78rem;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;max-width:320px}
 
 /* Ticket detail */
 .t-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
 .t-head h2{font-size:1.05rem;font-family:monospace;margin-right:6px;text-transform:none;color:var(--text)}
-.banner{border-radius:var(--radius);padding:10px 14px;font-size:.86rem}
+.banner{border-radius:var(--radius);padding:10px 14px;font-size:.85rem}
 .banner.human{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.45)}
 .banner.auto{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4)}
 .banner.info{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.4)}
@@ -125,11 +131,11 @@ td.id{font-family:monospace;color:#c7d2fe;white-space:nowrap}
 .msg{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px}
 .msg.admin{border-left:3px solid var(--accent)}
 .msg .meta{display:flex;justify-content:space-between;font-size:.74rem;color:var(--muted);margin-bottom:4px}
-.msg .tx{white-space:pre-wrap;font-size:.9rem}
+.msg .tx{white-space:pre-wrap;font-size:.88rem}
 .rule{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:9px 12px}
 .rule .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
-.rule .rid{background:var(--accent);color:#fff;font-weight:700;font-size:.76rem;padding:1px 8px;border-radius:5px}
-.rule q{display:block;font-style:italic;color:var(--text2);font-size:.83rem;margin:4px 0;quotes:"«" "»"}
+.rule .rid{background:var(--accent);color:#fff;font-weight:700;font-size:.75rem;padding:1px 8px;border-radius:5px}
+.rule q{display:block;font-style:italic;color:var(--text2);font-size:.82rem;margin:4px 0;quotes:"«" "»"}
 .rule .pun{font-size:.76rem;color:#fcd34d}
 .ver-ok{color:#6ee7b7;font-size:.76rem;font-weight:600}
 .ver-bad{color:#fca5a5;font-size:.76rem;font-weight:600}
@@ -139,6 +145,14 @@ td.id{font-family:monospace;color:#c7d2fe;white-space:nowrap}
 .timeline .when{color:var(--muted);font-size:.74rem}
 details summary{cursor:pointer;color:var(--text2);font-size:.85rem}
 ul.reasons{padding-left:18px;font-size:.82rem;color:var(--text2);display:flex;flex-direction:column;gap:3px;margin-top:6px}
+
+/* Telegram bubble */
+.tg-msg{background:#182533;border:1px solid #2b5278;border-radius:12px;padding:12px 14px;font-size:.85rem;line-height:1.45}
+.tg-msg pre{white-space:pre-wrap;font-family:inherit}
+.tg-kb{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.tg-btn{background:#2b5278;border:0;color:#fff;padding:7px 10px;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.tg-btn:hover:not(:disabled){background:#356594}
+.tg-btn:disabled{opacity:.55;cursor:default}
 
 /* States */
 .empty{padding:28px;text-align:center;color:var(--text2);font-size:.9rem}
@@ -184,7 +198,7 @@ ul.reasons{padding-left:18px;font-size:.82rem;color:var(--text2);display:flex;fl
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="brand"><div class="logo" aria-hidden="true">GM</div><div>Grand Mobile Support Copilot<small>Админ-панель поддержки · триаж, правила, черновики</small></div></div>
+    <div class="brand"><div class="logo" aria-hidden="true">GM</div><div>Grand Mobile Support Copilot<small>Админ-панель поддержки · ИИ-триаж, Telegram, OCR доказательств, Антифрод</small></div></div>
     <div class="spacer"></div>
     <div class="userbox">
       <label for="userSelect">Пользователь (demo):</label>
@@ -193,8 +207,7 @@ ul.reasons{padding-left:18px;font-size:.82rem;color:var(--text2);display:flex;fl
     </div>
   </header>
   <div class="demo-strip" id="demoNotice" role="note">
-    DEMO MODE: роль выбирается переключателем без аутентификации. Права проверяются на backend по серверной таблице ролей,
-    но это не безопасная авторизация — подключение к серверам Grand Mobile не выполняется, используются локальные данные.
+    DEMO MODE: роль выбирается переключателем без аутентификации. Финальное решение всегда остаётся за человеком — никаких автоматических наказаний на основании подозрений ИИ не применяется.
   </div>
 
   <nav class="sidebar" aria-label="Основное меню" id="sidebar"></nav>
@@ -235,7 +248,10 @@ const ICONS = {
   save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
   hand:'<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8a8 8 0 0 0 16 0v-3a2 2 0 0 0-4 0"/>',
   ask:'<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
-  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7A2 2 0 0 1 22 16.9z"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'
 };
 const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
 const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -244,7 +260,7 @@ const fmtTime = (iso) => { if(!iso) return '—'; const d=new Date(iso); return 
 const LANGS = {ru:'Русский',kk:'Казахский',uz:'Узбекский',en:'Английский',und:'Не определён'};
 const PRIO = {critical:'Критический',high:'Высокий',medium:'Средний',low:'Низкий'};
 const ACTION_NAMES = {
-  ticket_imported:'Импорт тикета', take:'Взял в работу', assign:'Переназначил', retriage:'Перезапустил анализ ИИ',
+  ticket_imported:'Импорт тикета', take:'Взял в работу', take_via_telegram:'Принял через Telegram', assign:'Переназначил', retriage:'Перезапустил анализ ИИ',
   save_draft:'Сохранил черновик', request_info:'Запросил данные у игрока', send_reply:'Отправил ответ', escalate:'Передал старшему',
   approve:'Одобрил решение', return:'Вернул на доработку', close:'Закрыл', assistant_saved:'Сохранил результат AI Assistant',
   settings_changed:'Изменил настройки', demo_reset:'Сбросил демо-данные'
@@ -303,15 +319,21 @@ $('#modalForm').addEventListener('submit', async e=>{
 
 /* ===================== Navigation ===================== */
 const NAV = [
-  {id:'overview',label:'Обзор',icon:'overview'},
+  {id:'overview',label:'Обзор Dashboard',icon:'overview'},
   {id:'mine',label:'Мои обращения',icon:'mine',count:'my_open'},
   {id:'queue',label:'Очередь репортов',icon:'queue',count:'queue_unassigned'},
-  {id:'junior',label:'Младший администратор',icon:'junior'},
+  {id:'junior',label:'Все обращения',icon:'junior'},
   {id:'senior',label:'Старший администратор',icon:'senior',count:'escalations_open',hot:true,senior:true},
   {sep:true},
-  {id:'assistant',label:'AI Report Assistant',icon:'assistant'},
+  {id:'admin-calls',label:'Прямые вызовы админа',icon:'phone',count:'direct_admin_calls_waiting',hot:true},
+  {id:'telegram',label:'Telegram-уведомления',icon:'send'},
+  {id:'evidence',label:'Анализ доказательств',icon:'camera'},
+  {id:'fraud',label:'Антифрод / Фейки',icon:'shield',count:'suspicious_complaints_count',hot:true},
+  {id:'offenders',label:'Повторные нарушители',icon:'user',count:'repeat_offenders_count'},
+  {sep:true},
+  {id:'assistant',label:'AI Admin Assistant',icon:'assistant'},
   {id:'rules',label:'База правил',icon:'rules'},
-  {id:'analytics',label:'Аналитика',icon:'analytics'},
+  {id:'analytics',label:'Аналитика ИИ',icon:'analytics'},
   {id:'audit',label:'История действий',icon:'audit'},
   {id:'settings',label:'Настройки',icon:'settings',seniorOnly:true},
 ];
@@ -344,18 +366,20 @@ async function router(){
 window.addEventListener('hashchange', router);
 
 /* ===================== Ticket list (shared) ===================== */
-const COLS=[['id','ID'],['created_at','Время'],['category','Категория'],['priority','Приоритет'],['language','Язык'],['status','Статус'],['assignee','Назначен'],[null,'Эскалация']];
+const COLS=[['id','ID'],['created_at','Время'],['category','Категория / Подкатегория'],['priority','Приоритет'],['language','Язык'],['status','Статус'],['confidence','Confidence'],['assignee','Назначен'],[null,'Режим ИИ']];
 
 function filtersHTML(opts={}){
   const m=S.meta;
   const opt=(v,l)=>`<option value="${esc(v)}">${esc(l)}</option>`;
   return `<div class="filters" role="search">
     <label class="sr-only" for="fq">Поиск</label>
-    <input id="fq" class="input" placeholder="Поиск по ID, тексту, категории…  ( / )" />
+    <input id="fq" class="input" placeholder="Поиск по ID, нику, игровому ID, тексту… ( / )" />
     <select id="fstatus" class="select" aria-label="Статус">${opt('','Все статусы')}${Object.entries(m.statuses).map(([k,v])=>opt(k,v)).join('')}</select>
     <select id="fcategory" class="select" aria-label="Категория">${opt('','Все категории')}${m.categories.map(c=>opt(c.id,c.name)).join('')}</select>
+    <select id="fsubcategory" class="select" aria-label="Подкатегория">${opt('','Все подкатегории (DM, PG, Читы…)')}${(m.subcategories||[]).map(sc=>opt(sc.id,sc.name)).join('')}</select>
     <select id="fpriority" class="select" aria-label="Приоритет">${opt('','Все приоритеты')}${m.priorities.map(p=>opt(p,PRIO[p]||p)).join('')}</select>
     <select id="flanguage" class="select" aria-label="Язык">${opt('','Все языки')}${m.languages.map(l=>opt(l,l.toUpperCase()+' — '+LANGS[l])).join('')}</select>
+    <select id="fhandling" class="select" aria-label="Режим обработки">${opt('','Все режимы ИИ')}${opt('auto','🤖 Автоматически обработанные ИИ')}${opt('needs_human','👨‍💻 Переданные администрации')}${opt('suspicious','⚠️ Подозрительные (Антифрод)')}${opt('admin_call','🆘 Прямой вызов админа')}</select>
     ${opts.assignee!==false?`<select id="fassignee" class="select" aria-label="Исполнитель">${opt('','Все исполнители')}${opt('none','Не назначен')}${S.users.map(u=>opt(u.id,u.name)).join('')}</select>`:''}
     <select id="fesc" class="select" aria-label="Эскалация">${opt('','Эскалация: все')}${opt('true','Только эскалированные')}${opt('false','Без эскалации')}</select>
     <button class="btn sm" id="freset" type="button">Сбросить</button>
@@ -363,11 +387,11 @@ function filtersHTML(opts={}){
 }
 function readFilters(){
   const v=id=>{ const el=$('#'+id); return el?el.value:''; };
-  return {q:v('fq'),status:v('fstatus'),category:v('fcategory'),priority:v('fpriority'),language:v('flanguage'),assignee:v('fassignee'),escalated:v('fesc')};
+  return {q:v('fq'),status:v('fstatus'),category:v('fcategory'),subcategory:v('fsubcategory'),priority:v('fpriority'),language:v('flanguage'),handling_mode:v('fhandling'),assignee:v('fassignee'),escalated:v('fesc')};
 }
 function bindFilters(reload){
   let t; $('#fq').addEventListener('input',()=>{clearTimeout(t); t=setTimeout(reload,220);});
-  ['fstatus','fcategory','fpriority','flanguage','fassignee','fesc'].forEach(id=>{ const el=$('#'+id); if(el) el.addEventListener('change',reload); });
+  ['fstatus','fcategory','fsubcategory','fpriority','flanguage','fhandling','fassignee','fesc'].forEach(id=>{ const el=$('#'+id); if(el) el.addEventListener('change',reload); });
   $('#freset').onclick=()=>{ document.querySelectorAll('.filters input,.filters select').forEach(el=>el.value=''); reload(); };
 }
 
@@ -384,21 +408,27 @@ function tableHTML(rows, caption){
     const active=S.list.sort===k; const dir=active?(S.list.order==='asc'?'ascending':'descending'):'none';
     return `<th scope="col" aria-sort="${dir}"><button type="button" data-sort="${k}">${l} ${active?(S.list.order==='asc'?'▲':'▼'):''}</button></th>`;
   }).join('');
-  const tr=rows.map(r=>`<tr tabindex="0" data-id="${esc(r.id)}" class="${r.id===S.selectedId?'sel':''}" aria-selected="${r.id===S.selectedId}">
+  const tr=rows.map(r=>{
+    const confPct = r.confidence_pct!=null ? r.confidence_pct : Math.round((r.confidence||0)*100);
+    return `<tr tabindex="0" data-id="${esc(r.id)}" class="${r.id===S.selectedId?'sel':''}" aria-selected="${r.id===S.selectedId}">
     <td class="id">${esc(r.id)}<div class="snip">${esc(r.snippet)}</div></td>
     <td class="small">${fmtTime(r.created_at)}</td>
-    <td><span class="b b-cat" title="${esc(r.category)}">${esc(r.category_name||r.category)}</span></td>
+    <td><span class="b b-cat" title="${esc(r.category)}">${esc(r.category_name||r.category)}</span>${r.subcategory_name?`<div style="margin-top:3px"><span class="b b-subcat">${esc(r.subcategory_name)}</span></div>`:''}</td>
     <td>${prioB(r.priority)}</td>
     <td>${langB(r.language)}</td>
     <td>${statusB(r.status,r.status_label)}</td>
+    <td><span class="b ${confPct>=80?'b-auto':(confPct>=65?'b-muted':'b-human')}">${confPct}%</span></td>
     <td class="small">${r.assignee_name?esc(r.assignee_name):'<span class="muted">—</span>'}</td>
-    <td>${r.status==='escalated'?'<span class="b b-human">'+ic('up')+'У старшего</span>':(r.escalated?'<span class="b b-muted">Была</span>':(r.needs_human?'<span class="b b-muted" title="ИИ рекомендует проверку человеком">Нужен человек</span>':'<span class="muted small">—</span>'))}</td>
-  </tr>`).join('');
+    <td>${r.status==='escalated'?'<span class="b b-human">'+ic('up')+'У старшего</span>':(r.auto_handled?'<span class="b b-auto">🤖 ИИ Авто</span>':(r.needs_human?'<span class="b b-human" title="Передано администрации">Нужен человек</span>':'<span class="muted small">—</span>'))}
+      ${(r.fraud_risk_score||0)>=40?`<div style="margin-top:2px"><span class="b p-high">⚠️ Fraud ${r.fraud_risk_score}%</span></div>`:''}
+    </td>
+  </tr>`;
+  }).join('');
   return `<div class="table-wrap"><table><caption>${esc(caption)} · ${rows.length}</caption><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
 }
 function bindTable(container, onSelect, reload){
   container.querySelectorAll('th button[data-sort]').forEach(b=>b.onclick=()=>{
-    const k=b.dataset.sort; if(S.list.sort===k) S.list.order=S.list.order==='asc'?'desc':'asc'; else { S.list.sort=k; S.list.order=k==='priority'||k==='created_at'?'desc':'asc'; }
+    const k=b.dataset.sort; if(S.list.sort===k) S.list.order=S.list.order==='asc'?'desc':'asc'; else { S.list.sort=k; S.list.order=k==='priority'||k==='created_at'||k==='confidence'?'desc':'asc'; }
     reload();
   });
   const rows=[...container.querySelectorAll('tbody tr')];
@@ -418,14 +448,15 @@ function factsHTML(f){
   const list=(a)=>a&&a.length?esc(a.join(', ')):'—';
   return `<div class="kv">
     <div><span>Никнеймы</span><b>${list(f.nicknames)}</b></div>
-    <div><span>Нарушитель (по словам игрока)</span><b>${esc(f.offender_nickname||'—')}</b></div>
-    <div><span>Заявитель</span><b>${esc(f.reporter_nickname||'—')}</b></div>
+    <div><span>Игровые ID</span><b>${list(f.player_ids)}</b></div>
+    <div><span>Нарушитель (ник / ID)</span><b>${esc(f.offender_nickname||'—')}${f.offender_id?' [ID: '+esc(f.offender_id)+']':''}</b></div>
+    <div><span>Заявитель (ник / ID)</span><b>${esc(f.reporter_nickname||'—')}${f.reporter_id?' [ID: '+esc(f.reporter_id)+']':''}</b></div>
     <div><span>Сервер</span><b>${f.server!=null?'#'+esc(f.server):'Не указан'}</b></div>
     <div><span>Доказательства</span><b>${f.has_evidence?'Есть · вложений: '+f.attachments_count:'Не приложены'}</b></div>
-    <div><span>Типы доказательств</span><b>${list(f.evidence_types)}</b></div>
-    <div><span>Пункты, упомянутые игроком</span><b>${list(f.mentioned_rules)}</b></div>
+    <div><span>Типы медиа</span><b>${list(f.evidence_types)}</b></div>
+    <div><span>Пункты правил в тексте</span><b>${list(f.mentioned_rules)}</b></div>
     <div><span>Неизвестные пункты</span><b style="color:${f.unknown_mentioned_rules&&f.unknown_mentioned_rules.length?'#fca5a5':'inherit'}">${list(f.unknown_mentioned_rules)}</b></div>
-    <div><span>Суммы / команды</span><b>${list([...(f.amounts||[]),...(f.commands_mentioned||[])])}</b></div>
+    <div><span>Сленг / опечатки</span><b>${list(f.slang_or_typos_normalized)}</b></div>
     <div><span>Смешение языков</span><b>${f.is_mixed_language?'Да: '+list(f.detected_languages):'Нет'}</b></div>
   </div>`;
 }
@@ -463,7 +494,7 @@ function detailsLine(d){
 function humanBanner(tr){
   return tr.needs_human
     ? `<div class="banner human"><b>${ic('alert')} Нужна проверка человеком</b>${esc(tr.needs_human_reason||'Требуется проверка модератором')}</div>`
-    : `<div class="banner auto"><b>${ic('check')} Проверка человеком не обязательна</b>Ответ подтверждён пунктами rules.json, рисков не выявлено. Оператор всё равно проверяет текст перед отправкой.</div>`;
+    : `<div class="banner auto"><b>${ic('check')} Автоматическая обработка ИИ (Проверка человеком не обязательна)</b>Обращение классифицировано как безопасное и простое (Confidence ${Math.round((tr.confidence||0)*100)}%). Ответ подтверждён пунктами rules.json.</div>`;
 }
 
 const JUNIOR_ACTIONS=['take','retriage','save_draft','request_info','send_reply','escalate'];
@@ -478,6 +509,8 @@ const ACTION_UI={
 
 function ticketDetailHTML(t, mode){
   const tr=t.triage||{}; const canEdit=t.allowed_actions.includes('save_draft');
+  const confPct = tr.confidence_pct!=null ? tr.confidence_pct : Math.round((tr.confidence||0)*100);
+  const confColor = confPct>=80 ? 'var(--ok)' : (confPct>=65 ? 'var(--warn)' : 'var(--bad)');
   const set=(S.user.role==='senior_admin'?SENIOR_ACTIONS:JUNIOR_ACTIONS);
   const buttons=set.map(a=>{ const u=ACTION_UI[a]; const allowed=t.allowed_actions.includes(a);
     if(!allowed && (a==='take') ) return '';
@@ -486,36 +519,86 @@ function ticketDetailHTML(t, mode){
   const deniedNotes=set.filter(a=>!t.allowed_actions.includes(a)&&a!=='take').map(a=>`<li><b>${ACTION_UI[a].label}:</b> ${esc(t.denied_actions[a])}</li>`).join('');
 
   const esc_=t.escalation?`<div class="banner human"><b>${ic('up')} Причина эскалации</b>${esc(t.escalation.reason)}<div class="small muted">${esc(t.escalation.by_name)} · ${fmtTime(t.escalation.at)}</div></div>`:'';
-  const rev=t.review?`<div class="banner ${t.review.action==='return'?'warn':'info'}"><b>Решение старшего: ${esc(t.review.action==='approve'?(t.review.decision_label):(t.review.action==='return'?'возвращено на доработку':'закрыто'))}</b>
+  const rev=t.review?`<div class="banner ${t.review.action==='return'?'warn':'info'}"><b>Решение: ${esc(t.review.action==='approve'?(t.review.decision_label):(t.review.action==='return'?'возвращено на доработку':(t.review.decision_label||'закрыто')))}</b>
      ${t.review.basis?'Основание: '+esc(t.review.basis)+'<br>':''}${t.review.comment?'Комментарий: '+esc(t.review.comment)+'<br>':''}
      ${t.review.evidence_reference?'Проверенные доказательства: '+esc(t.review.evidence_reference)+'<br>':''}
      ${t.review.rule_ids&&t.review.rule_ids.length?'Пункты: '+esc(t.review.rule_ids.join(', '))+'<br>':''}
      <span class="small muted">${esc(t.review.by_name)} · ${fmtTime(t.review.at)}${t.review.note?' · '+esc(t.review.note):''}</span></div>`:'';
-  const juniorResp = (mode==='senior')?`<div class="card"><h3>Ответ младшего администратора</h3>${t.junior_response?`<div class="msg admin"><div class="tx">${esc(t.junior_response)}</div></div>`:'<div class="muted small">Младший администратор не подготовил ответ.</div>'}</div>`:'';
-  const aiInitial = (mode==='senior')?`<div class="card"><h3>Первоначальный анализ ИИ <span class="b b-muted">рекомендация, не решение</span></h3>
-     <div class="kv"><div><span>Категория</span><b>${esc(tr.category_name||tr.category)}</b></div><div><span>Приоритет</span><b>${esc(PRIO[tr.priority]||tr.priority)}</b></div>
-     <div><span>Confidence</span><b>${Math.round((tr.confidence||0)*100)}%</b></div><div><span>Спам / дубликат</span><b>${tr.is_spam?'спам':'нет'} / ${tr.is_duplicate?'дубликат':'нет'}</b></div></div>
-     <details style="margin-top:8px"><summary>Обоснование ИИ (reasons)</summary><ul class="reasons">${(tr.reasons||[]).map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details></div>`:'';
-  const similar=(t.similar_tickets&&t.similar_tickets.length)?`<div class="banner warn"><b>Похожие обращения (возможные дубликаты)</b>${t.similar_tickets.map(s=>`${esc(s.id)} — сходство ${Math.round(s.similarity*100)}%, ${esc(s.status_label)}`).join('<br>')}</div>`:'';
+
+  // Fraud alert banner
+  const fraudScore = tr.fraud_risk_score || 0;
+  const fraudBanner = fraudScore >= 30 ? `<div class="banner warn"><b>⚠️ Антифрод: Риск недостоверной жалобы ${fraudScore}/100 (${esc(tr.fraud_risk_level||'medium')})</b>
+    <ul class="reasons">${(tr.fraud_reasons||[]).map(fr=>`<li>${esc(fr)}</li>`).join('')}</ul>
+    <div class="small muted" style="margin-top:4px">Никакие автоматические наказания на основании подозрения не применяются — решение за администратором.</div></div>` : '';
+
+  // Offender Repeat History preview
+  const ph = tr.player_history;
+  const phBlock = (ph && ph.found) ? `<div class="card"><h3>🔁 История нарушителя: ${esc(ph.nickname)} ${ph.player_id?`[ID: ${esc(ph.player_id)}]`:''} <a class="small" href="#offenders/${encodeURIComponent(ph.nickname)}">карточка →</a></h3>
+    <div class="kv">
+      <div><span>Подтверждённых нарушений</span><b style="color:${ph.confirmed_violations>0?'#fca5a5':'#6ee7b7'}">${ph.confirmed_violations}</b></div>
+      <div><span>Неподтверждённых жалоб</span><b>${ph.unconfirmed_complaints||0}</b></div>
+      <div><span>Отклонённых</span><b>${ph.rejected_complaints||0}</b></div>
+      <div><span>Уровень риска</span><b>${esc((ph.risk_level||'low').toUpperCase())}</b></div>
+    </div>
+    ${(ph.repeat_violations&&ph.repeat_violations.length)?`<ul class="reasons" style="margin-top:6px">${ph.repeat_violations.map(rv=>`<li>${esc(rv)}</li>`).join('')}</ul>`:''}
+  </div>` : '';
+
+  // AI Admin Assistant block
+  const cop = tr.ai_summary || {};
+  const copSimilar = cop.similar_resolved_cases || [];
+  const copRecs = cop.recommendations || [];
+  const evRep = tr.evidence_report;
+  const copBlock = `<div class="card"><h3>🤖 AI Admin Assistant <span class="b b-muted">финальное решение за администратором</span></h3>
+    <div class="msg" style="margin-bottom:8px"><div class="tx small">${esc(cop.summary || '')}</div></div>
+    ${evRep?`<div class="banner ${evRep.is_consistent?'info':'warn'}" style="margin-bottom:8px"><b>📎 Анализ доказательств (${esc(evRep.status)})</b>${esc(evRep.admin_report||'')}</div>`:''}
+    ${copRecs.length?`<div style="margin-bottom:8px"><b class="small">Рекомендации ИИ администратору:</b><ul class="reasons">${copRecs.map(rc=>`<li>${esc(rc)}</li>`).join('')}</ul></div>`:''}
+    ${copSimilar.length?`<details><summary>Похожие рассмотренные обращения (${copSimilar.length})</summary><div class="stack" style="margin-top:6px">${copSimilar.map(sc=>`<div class="msg"><div class="meta"><span>Прецедент ${esc(sc.case_id)} · п. ${esc(sc.rule_id)}</span><span>сходство ${sc.similarity_pct}%</span></div><div class="small"><b>${esc(sc.title)}</b><br>${esc(sc.resolution)}</div></div>`).join('')}</div></details>`:''}
+  </div>`;
+
+  // Confidence Score block
+  const confBlock = `<div class="conf-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:.82rem">
+      <span><b>Confidence Score ИИ: ${confPct}%</b> · Маршрут: <span class="b ${tr.auto_handled?'b-auto':'b-human'}">${tr.auto_handled?'Авто-обработка ИИ':'Передано администрации ('+esc(tr.routing_decision||'admin')+')'}</span></span>
+      <button type="button" class="btn sm" data-act="tg_notify" title="Отправить уведомление в Telegram">${ic('send')}В Telegram</button>
+    </div>
+    <div class="conf-track"><div class="conf-fill" style="width:${confPct}%;background:${confColor}"></div></div>
+    <details style="margin-top:6px"><summary>Причины классификации (${(tr.reasons||[]).length})</summary><ul class="reasons">${(tr.reasons||[]).map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>
+  </div>`;
+
+  // Feedback Loop block
+  const fbs = t.feedback_entries || [];
+  const fbBlock = `<div class="card"><h3>🔄 Feedback Loop (Оценка работы ИИ) <span class="b b-muted">${fbs.length?'оценок: '+fbs.length:'ожидает оценки'}</span></h3>
+    <p class="small muted" style="margin-bottom:8px">Отметьте правильность анализа ИИ. При исправлении ошибки веса классификатора автоматически обновляются.</p>
+    <div class="actions">
+      <button type="button" class="btn ok sm" data-act="fb_ok">${ic('check')}Анализ ИИ верный</button>
+      <button type="button" class="btn warn sm" data-act="fb_fix">✏️ Исправить ошибку ИИ</button>
+    </div>
+    ${fbs.length?`<div class="small muted" style="margin-top:8px">Последняя оценка: <b>${esc(fbs[fbs.length-1].feedback_label)}</b> (${esc(fbs[fbs.length-1].admin_name)})</div>`:''}
+  </div>`;
 
   return `<div class="stack">
-    <div class="t-head"><h2>${esc(t.id)}</h2>${statusB(t.status,t.status_label)}${prioB(tr.priority)}${langB(tr.language)}<span class="b b-cat">${esc(tr.category_name||tr.category)}</span>
-      <span class="b b-muted">${ic('user')}${esc(t.assignee_name||'Не назначен')}</span><span class="b b-muted">Confidence ${Math.round((tr.confidence||0)*100)}%</span>
+    <div class="t-head"><h2>${esc(t.id)}</h2>${statusB(t.status,t.status_label)}${prioB(tr.priority)}${langB(tr.language)}
+      <span class="b b-cat">${esc(tr.category_name||tr.category)}</span>
+      ${tr.subcategory_name?`<span class="b b-subcat">${esc(tr.subcategory_name)}</span>`:''}
+      <span class="b b-muted">${ic('user')}${esc(t.assignee_name||'Не назначен')}</span>
+      <span class="b b-muted">Confidence ${confPct}%</span>
       ${t.is_synthetic_demo?'<span class="b b-muted" title="Синтетическое демонстрационное обращение">demo</span>':''}</div>
-    ${esc_}${rev}${humanBanner(tr)}${similar}
-    ${aiInitial}${juniorResp}
+    ${esc_}${rev}${humanBanner(tr)}${fraudBanner}
+    ${confBlock}
     <div class="card"><h3>Переписка <span class="small muted">${esc(t.kind)} · создано ${fmtTime(t.created_at)}</span></h3><div class="stack">
       ${(t.messages||[]).map(m=>`<div class="msg ${m.role!=='player'?'admin':''}"><div class="meta"><span>${m.role==='player'?'Игрок':'Поддержка'+(m.type==='info_request'?' · запрос данных':'')}</span><span>${m.at?fmtTime(m.at)+' · ':''}вложений: ${typeof m.attachments==='number'?m.attachments:(Array.isArray(m.attachments)?m.attachments.length:0)}</span></div><div class="tx">${esc(m.text)}</div></div>`).join('')}
     </div></div>
+    ${copBlock}
+    ${phBlock}
     <div class="card"><h3>Извлечённые факты</h3>${factsHTML(tr.facts)}</div>
-    <div class="card"><h3>${mode==='senior'?'Подтверждённые источники':'Найденные пункты правил'} <span class="b b-cat">${(tr.cited_rules||[]).length}</span></h3>${rulesHTML(tr.cited_rules,t.rule_verification)}</div>
+    <div class="card"><h3>Найденные пункты правил <span class="b b-cat">${(tr.cited_rules||[]).length}</span></h3>${rulesHTML(tr.cited_rules,t.rule_verification)}</div>
     <div class="card"><h3>Черновик ИИ ${canEdit?'<span class="small muted">редактируемый</span>':'<span class="small muted">только чтение</span>'}</h3>
       <label class="sr-only" for="draftText">Черновик ответа</label>
-      <textarea id="draftText" class="textarea" rows="7" ${canEdit?'':'readonly'}>${esc(t.draft||'')}</textarea>
+      <textarea id="draftText" class="textarea" rows="6" ${canEdit?'':'readonly'}>${esc(t.draft||'')}</textarea>
       <div class="actions" style="margin-top:10px"><button type="button" class="btn primary" data-act="copy">${ic('copy')}Скопировать ответ</button>${buttons}</div>
       ${deniedNotes?`<details style="margin-top:8px"><summary>Почему некоторые действия недоступны</summary><ul class="reasons">${deniedNotes}</ul></details>`:''}
     </div>
-    ${mode!=='senior'?`<div class="card"><details><summary>Обоснование триажа ИИ (reasons)</summary><ul class="reasons">${(tr.reasons||[]).map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details></div>`:''}
+    ${fbBlock}
     <div class="card"><h3>История изменений</h3>${historyHTML(t.history)}</div>
   </div>`;
 }
@@ -529,9 +612,52 @@ const INFO_TEMPLATES={
 
 async function ticketAction(t, act, afterChange){
   const id=encodeURIComponent(t.id); const draft=()=>($('#draftText')||{}).value||'';
+  const tr=t.triage||{};
   const done=async(msg)=>{ toast(msg); await afterChange(); refreshCounts(); };
   try{
     if(act==='copy') return copyText(draft());
+    if(act==='tg_notify'){
+      const res=await api('POST',`/api/telegram/notify/${id}`);
+      toast(`Отправлено в Telegram → назначен ${res.notification.assigned_admin_name}`);
+      return;
+    }
+    if(act==='fb_ok'){
+      await api('POST','/api/feedback',{
+        ticket_id:t.id, admin_id:S.user.id, admin_name:S.user.name,
+        feedback_type:'correct_classification',
+        ai_category:tr.category||'rp_violation', ai_priority:tr.priority||'medium',
+        ai_rule_ids:tr.rule_ids||[], note:'Подтверждено администратором в карточке тикета'
+      });
+      return done('Feedback сохранён: анализ ИИ отмечен как верный');
+    }
+    if(act==='fb_fix'){
+      return openModal({
+        title:'Исправить ошибку ИИ (Feedback Loop)', submit:'Сохранить и дообучить ИИ', kind:'warn',
+        body:`<div class="field"><label>Тип ошибки ИИ</label><select name="feedback_type" class="select">
+          <option value="wrong_category">Неверная категория</option>
+          <option value="wrong_priority">Неверный приоритет</option>
+          <option value="wrong_rule">Неверный пункт правил</option>
+          <option value="wrong_evidence_analysis">Ошибка анализа доказательств</option>
+        </select></div>
+        <div class="field"><label>Правильная категория</label><select name="correct_category" class="select">
+          ${S.meta.categories.map(c=>`<option value="${esc(c.id)}" ${c.id===tr.category?'selected':''}>${esc(c.name)}</option>`).join('')}
+        </select></div>
+        <div class="field"><label>Правильный приоритет</label><select name="correct_priority" class="select">
+          ${S.meta.priorities.map(p=>`<option value="${esc(p)}" ${p===tr.priority?'selected':''}>${esc(PRIO[p]||p)}</option>`).join('')}
+        </select></div>
+        <div class="field"><label>Комментарий администратора</label><textarea name="note" class="textarea" rows="3" placeholder="Укажите причину корректировки…"></textarea></div>`,
+        onSubmit:async(fd)=>{
+          await api('POST','/api/feedback',{
+            ticket_id:t.id, admin_id:S.user.id, admin_name:S.user.name,
+            feedback_type:fd.get('feedback_type'),
+            ai_category:tr.category||'rp_violation', correct_category:fd.get('correct_category'),
+            ai_priority:tr.priority||'medium', correct_priority:fd.get('correct_priority'),
+            ai_rule_ids:tr.rule_ids||[], note:fd.get('note')||null
+          });
+          await done('Обратная связь сохранена, веса классификатора обновлены');
+        }
+      });
+    }
     if(act==='take'){ await api('POST',`/api/ws/tickets/${id}/take`); return done('Обращение взято в работу'); }
     if(act==='retriage'){ await api('POST',`/api/ws/tickets/${id}/triage`); return done('Анализ ИИ перегенерирован'); }
     if(act==='save_draft'){ const r=await api('PUT',`/api/ws/tickets/${id}/draft`,{text:draft()}); toast(r.safety_warnings&&r.safety_warnings.length?'Черновик сохранён, но не пройдёт отправку: '+r.safety_warnings.join(', '):'Черновик сохранён', r.safety_warnings&&r.safety_warnings.length?'warn':'ok'); await afterChange(); return; }
@@ -542,7 +668,7 @@ async function ticketAction(t, act, afterChange){
       body:`<div class="field"><label for="m_text">Сообщение игроку</label><textarea id="m_text" name="text" class="textarea" rows="5" required>${esc(INFO_TEMPLATES[(t.triage||{}).language]||INFO_TEMPLATES.ru)}</textarea></div>`,
       onSubmit:async(fd)=>{ await api('POST',`/api/ws/tickets/${id}/request-info`,{text:fd.get('text')}); await done('Запрос данных отправлен'); }});
     if(act==='escalate') return openModal({title:'Передать старшему специалисту',submit:'Эскалировать',kind:'danger',
-      body:`<div class="field"><label for="m_reason">Причина эскалации (обязательно)</label><textarea id="m_reason" name="reason" class="textarea" rows="4" minlength="5" required>${esc((t.triage||{}).needs_human_reason||'')}</textarea></div><p class="small muted">Текущий черновик будет передан старшему как ваш вариант ответа.</p>`,
+      body:`<div class="field"><label for="m_reason">Причина эскалации (обязательно)</label><textarea id="m_reason" name="reason" class="textarea" rows="4" minlength="5" required>${esc((t.triage||{}).needs_human_reason||'')}</textarea></div><p class="small muted">Текущий черновик будет передан старшему и отправлен в Telegram.</p>`,
       onSubmit:async(fd)=>{ await api('POST',`/api/ws/tickets/${id}/escalate`,{reason:fd.get('reason')}); await done('Обращение передано старшему специалисту'); }});
     if(act==='assign') return openModal({title:'Переназначить обращение',submit:'Назначить',
       body:`<div class="field"><label for="m_user">Исполнитель</label><select id="m_user" name="assignee_id" class="select">${S.users.map(u=>`<option value="${esc(u.id)}" ${u.id===t.assignee?'selected':''}>${esc(u.name)} — ${esc(u.role_label)}</option>`).join('')}</select></div>`,
@@ -556,7 +682,7 @@ async function ticketAction(t, act, afterChange){
     if(act==='approve'){
       const cited=(t.triage&&t.triage.cited_rules)||[];
       return openModal({title:'Одобрить итоговое решение',submit:'Зафиксировать решение',kind:'ok',
-        body:`<div class="banner warn" style="margin-bottom:12px"><b>ИИ не принимает решений</b>Анализ ИИ — только рекомендация. Подтвердить нарушение можно лишь после личной проверки доказательств; основание и автор решения фиксируются в журнале.</div>
+        body:`<div class="banner warn" style="margin-bottom:12px"><b>ИИ не принимает решений</b>Анализ ИИ — только рекомендация. Подтвердить нарушение можно лишь после личной проверки доказательств; основание и автор решения фиксируются в журнале и истории нарушителя.</div>
         <div class="field"><label for="m_dec">Итоговое решение</label><select id="m_dec" name="decision" class="select">${Object.entries(S.meta.decisions).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div>
         <div class="field"><label for="m_basis">Основание решения (обязательно, от 10 символов)</label><textarea id="m_basis" name="basis" class="textarea" rows="3" required minlength="10"></textarea></div>
         <div class="field"><label>Пункты rules.json, на которых основано решение</label>${cited.length?cited.map(r=>`<label class="check"><input type="checkbox" name="rule_ids" value="${esc(r.id)}"> п. ${esc(r.id)} — ${esc(r.title)}</label>`).join(''):'<div class="small muted">ИИ не нашёл подходящих пунктов.</div>'}
@@ -602,13 +728,12 @@ async function listPage(main, arg, cfg){
 
 PAGES.mine=(m,a)=>listPage(m,a,{page:'mine',scope:'mine',title:'Мои обращения',subtitle:'Тикеты, назначенные на вас.',caption:'Мои обращения',filters:{assignee:false}});
 PAGES.queue=(m,a)=>listPage(m,a,{page:'queue',scope:'queue',title:'Очередь репортов',subtitle:'Новые и возвращённые обращения без исполнителя. Возьмите тикет в работу из карточки.',caption:'Очередь без исполнителя'});
-PAGES.junior=(m,a)=>listPage(m,a,{page:'junior',scope:'all',title:'Рабочее место администратора',
-  subtitle: S.user.role==='senior_admin'?'Все обращения команды, включая работу младших администраторов.':'Ваши обращения и разрешённая общая очередь.',caption:'Список обращений'});
+PAGES.junior=(m,a)=>listPage(m,a,{page:'junior',scope:'all',title:'Список обращений',
+  subtitle: S.user.role==='senior_admin'?'Все обращения команды с фильтрами по категориям, подкатегориям, приоритетам и режимам ИИ.':'Ваши обращения и разрешённая общая очередь.',caption:'Список обращений'});
 
 /* ===================== Senior page ===================== */
 PAGES.senior=async(main,arg)=>{
   if(S.user.role!=='senior_admin'){
-    // Ask backend anyway to demonstrate server-side enforcement
     try{ await api('GET','/api/ws/tickets?scope=escalations'); }catch(e){
       main.innerHTML=`<div class="page-head"><div><h1>Старший администратор</h1><p>Очередь эскалаций и итоговые решения.</p></div></div>${errBox(e)}
       <p class="muted small" style="margin-top:10px">Ответ получен от backend: доступ к очереди эскалаций есть только у роли senior_admin.</p>`; return;
@@ -640,46 +765,354 @@ PAGES.senior=async(main,arg)=>{
   if(arg) loadDetail(det,arg,'senior',reload);
 };
 
-/* ===================== Overview ===================== */
+/* ===================== Overview (Requirement 10: Dashboard) ===================== */
 PAGES.overview=async(main)=>{
   const [a, att, aud]=await Promise.all([api('GET','/api/ws/analytics'), api('GET','/api/ws/tickets?scope=all&sort=priority'), api('GET','/api/ws/audit?limit=6')]);
   const senior=S.user.role==='senior_admin';
   const attention=att.tickets.filter(r=>!['resolved','closed'].includes(r.status)).slice(0,8);
-  const stat=(v,l,href,hot)=>`<div class="stat ${hot&&v>0?'hot':''}"><a href="${href}"><div class="v">${v}</div><div class="l">${l}</div></a></div>`;
-  main.innerHTML=`<div class="page-head"><div><h1>Обзор</h1><p>${esc(S.user.name)} · ${esc(S.user.role_label)}</p></div>
-    <div class="actions"><a class="btn primary" href="#assistant">${ic('assistant')}Проверить репорт</a><a class="btn" href="#queue">${ic('queue')}Очередь</a></div></div>
+  const eff=a.ai_effectiveness||{};
+  const stat=(v,l,href,cls='')=>`<div class="stat ${cls}"><a href="${href}"><div class="v">${v}</div><div class="l">${l}</div></a></div>`;
+  main.innerHTML=`<div class="page-head"><div><h1>Обзор Dashboard</h1><p>${esc(S.user.name)} · ${esc(S.user.role_label)} · Полная сводка обращений и эффективности ИИ</p></div>
+    <div class="actions"><a class="btn primary" href="#assistant">${ic('assistant')}AI Admin Assistant</a><a class="btn" href="#telegram">${ic('send')}Telegram-бот</a><a class="btn" href="#evidence">${ic('camera')}Проверка доказательств</a></div></div>
     <div class="stats">
-      ${stat(a.my_open,'Мои открытые обращения','#mine')}
-      ${stat(a.queue_unassigned,'В очереди без исполнителя','#queue')}
-      ${stat(a.escalations_open, senior?'Эскалации ждут решения':'Мои обращения у старшего', senior?'#senior':'#mine', true)}
-      ${stat(a.critical_open,'Критические открытые','#junior',true)}
-      ${stat(a.needs_human_open,'Требуют проверки человеком','#junior')}
+      ${stat(a.visible_total,'Всего обращений','#junior')}
+      ${stat(a.queue_unassigned,'Очередь ожидающих жалоб','#queue',a.queue_unassigned>0?'hot':'')}
+      ${stat(a.auto_handled_count||0,'Обработано ИИ автоматически','#junior','ok')}
+      ${stat(a.admin_escalated_count||0,'Передано администрации','#junior')}
+      ${stat(a.direct_admin_calls_total||0,`Прямые вызовы админа (ждут: ${a.direct_admin_calls_waiting||0})`,'#admin-calls',(a.direct_admin_calls_waiting||0)>0?'hot':'')}
+      ${stat(a.suspicious_complaints_count||0,'Подозрительные жалобы (Антифрод)','#fraud',(a.suspicious_complaints_count||0)>0?'hot':'')}
+      ${stat(a.repeat_offenders_count||0,'Повторные нарушители','#offenders')}
+      ${stat((eff.avg_confidence_pct||0)+'%','Средний Confidence Score ИИ','#analytics','ok')}
     </div>
     <div class="grid2">
-      <section class="card"><h2>Требуют внимания <a class="small" href="#junior">все →</a></h2>
+      <section class="card"><h2>Требуют внимания администрации <a class="small" href="#junior">все →</a></h2>
         ${attention.length?`<div class="stack">${attention.map(r=>`<a href="#junior/${encodeURIComponent(r.id)}" class="msg" style="display:block;color:inherit">
-          <div class="t-head" style="margin-bottom:2px"><b style="font-family:monospace">${esc(r.id)}</b>${prioB(r.priority)}${statusB(r.status,r.status_label)}${r.needs_human?'<span class="b b-human">Нужен человек</span>':''}</div>
-          <div class="small muted">${esc(r.category_name)} · ${esc(r.assignee_name||'не назначен')} · ${fmtTime(r.created_at)}</div></a>`).join('')}</div>`:'<div class="empty">Открытых обращений нет.</div>'}
+          <div class="t-head" style="margin-bottom:2px"><b style="font-family:monospace">${esc(r.id)}</b>${prioB(r.priority)}${statusB(r.status,r.status_label)}${r.subcategory_name?`<span class="b b-subcat">${esc(r.subcategory_name)}</span>`:''}${r.needs_human?'<span class="b b-human">Нужен человек</span>':'<span class="b b-auto">ИИ Авто</span>'}</div>
+          <div class="small muted">${esc(r.category_name)} · Confidence ${r.confidence_pct||Math.round((r.confidence||0)*100)}% · ${esc(r.assignee_name||'не назначен')}</div></a>`).join('')}</div>`:'<div class="empty">Открытых обращений нет.</div>'}
       </section>
-      <section class="card"><h2>Последние действия ${senior?'команды':'(ваши)'} <a class="small" href="#audit">журнал →</a></h2>${historyHTML(aud.entries.slice().reverse())}
-        <div class="kv" style="margin-top:12px"><div><span>Среднее / p95 время триажа</span><b>${a.processing.avg_processing_time_ms} / ${a.processing.p95_processing_time_ms} мс</b></div>
-        <div><span>Стоимость на обращение</span><b>$${Number(a.processing.avg_cost_usd||0).toFixed(4)}</b></div></div>
+      <section class="card"><h2>Эффективность ИИ и последние действия <a class="small" href="#analytics">аналитика →</a></h2>
+        <div class="kv" style="margin-bottom:12px">
+          <div><span>Доля авто-обработки ИИ</span><b>${eff.auto_handled_rate_pct||0}%</b></div>
+          <div><span>Точность по Feedback Loop</span><b>${eff.feedback_accuracy_pct!=null?eff.feedback_accuracy_pct+'%':'100%'} (оценок: ${eff.feedback_total||0})</b></div>
+          <div><span>Telegram-уведомлений</span><b>${eff.telegram_notifications_sent||0} отправлено</b></div>
+          <div><span>Среднее / p95 время триажа</span><b>${a.processing.avg_processing_time_ms} / ${a.processing.p95_processing_time_ms} мс</b></div>
+        </div>
+        <h3>Журнал активности <a class="small" href="#audit">весь →</a></h3>
+        ${historyHTML(aud.entries.slice().reverse())}
       </section>
     </div>`;
 };
 
-/* ===================== AI Report Assistant ===================== */
+/* ===================== 1. Telegram Notifications Page ===================== */
+PAGES.telegram=async(main)=>{
+  const d=await api('GET','/api/telegram/notifications');
+  const st=d.status||{};
+  const admins=st.admins||[];
+  main.innerHTML=`<div class="page-head"><div><h1>Telegram-уведомления администраторам</h1><p>Автоматические оповещения о жалобах, распределение нагрузки между администраторами, кнопки «Принять жалобу» и SLA-напоминания.</p></div>
+    <div class="actions"><button type="button" class="btn warn" id="tgRemind">⏰ Проверить SLA и отправить напоминания</button><button type="button" class="btn" id="tgRefresh">${ic('refresh')}Обновить</button></div></div>
+    <div class="banner ${st.live_bot_configured?'auto':'info'}" style="margin-bottom:14px">
+      <b>Статус Telegram-бота: ${st.live_bot_configured?'Подключён к Telegram Bot API':'Локальный режим + интерактивная лента (Токен задаётся в .env)'}</b>
+      ${esc(st.config_hint||'')} · Порог напоминания: ${st.reminder_minutes_threshold||15} мин. · Всего уведомлений: ${st.total_notifications||0} (ожидают: ${st.pending_notifications||0}, принято: ${st.accepted_notifications||0}, напоминаний: ${st.total_reminders_sent||0})
+    </div>
+    <div class="card" style="margin-bottom:14px"><h2>Распределение жалоб между администраторами (Smart Load Balancing)</h2>
+      <div class="table-wrap"><table><thead><tr><th><span class="th">Администратор</span></th><th><span class="th">Роль</span></th><th><span class="th">Telegram</span></th><th><span class="th">Активная нагрузка</span></th><th><span class="th">Всего распределено</span></th><th><span class="th">Принято</span></th></tr></thead>
+      <tbody>${admins.map(a=>`<tr><td><b>${esc(a.name)}</b></td><td>${esc(a.role_label)}</td><td class="id">${esc(a.telegram_username)}</td><td><span class="b ${a.active_load>2?'p-high':'b-auto'}">${a.active_load} в работе</span></td><td>${a.assigned_count}</td><td>${a.accepted_count}</td></tr>`).join('')}</tbody></table></div>
+    </div>
+    <div class="stack" id="tgFeed">${d.notifications.length?d.notifications.map(n=>`<div class="tg-msg">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span class="b ${n.status==='accepted'?'b-auto':'p-high'}">${n.status==='accepted'?'✅ Принято: '+esc(n.accepted_by_name):'⏳ Ожидает принятия'}</span>
+        <span class="small muted">${fmtTime(n.created_at)} · Назначен: <b>${esc(n.assigned_admin_name)}</b> (${esc(n.assigned_admin_tg)}) ${n.reminders_sent?`· ⏰ Напоминаний: ${n.reminders_sent}`:''}</span>
+      </div>
+      <div style="white-space:pre-wrap">${n.text_html}</div>
+      <div class="tg-kb">
+        <button type="button" class="tg-btn" data-cb="${esc(n.inline_keyboard[0][0].callback_data)}" ${n.status==='accepted'?'disabled':''}>${n.status==='accepted'?'✅ Жалоба принята':'✅ Принять жалобу'}</button>
+        <a class="tg-btn" href="${esc(n.ticket_id?'#junior/'+encodeURIComponent(n.ticket_id):'#admin-calls')}">🔗 Открыть жалобу</a>
+      </div>
+    </div>`).join(''):'<div class="card empty">Уведомлений пока нет.</div>'}</div>`;
+
+  $('#tgRefresh').onclick=()=>PAGES.telegram(main);
+  $('#tgRemind').onclick=async()=>{
+    try{
+      const r=await api('POST','/api/telegram/check-reminders?max_age_minutes=0');
+      toast(`Проверено SLA: отправлено напоминаний — ${r.reminders_sent}`);
+      PAGES.telegram(main);
+    }catch(e){ toast(e.message,'error'); }
+  };
+  main.querySelectorAll('[data-cb]').forEach(btn=>btn.onclick=async()=>{
+    try{
+      const r=await api('POST','/api/telegram/callback',{callback_data:btn.dataset.cb,admin_id:S.user.id,admin_name:S.user.name});
+      toast(`Жалоба ${r.target_id} принята администратором ${r.accepted_by_name}`);
+      refreshCounts();
+      PAGES.telegram(main);
+    }catch(e){ toast(e.message,'error'); }
+  });
+};
+
+/* ===================== 3. Direct Admin Calls Page ===================== */
+PAGES['admin-calls']=async(main)=>{
+  const d=await api('GET','/api/admin-requests');
+  const st=d.stats||{};
+  main.innerHTML=`<div class="page-head"><div><h1>Прямые вызовы администратора</h1><p>Обращения, где игрок явно попросил подключить живого администратора (поддержка RU, KK, EN, UZ).</p></div>
+    <div class="actions"><button type="button" class="btn primary" id="arNew">+ Симулировать прямой вызов от игрока</button></div></div>
+    <div class="stats">
+      <div class="stat hot"><div class="v">${st.waiting||0}</div><div class="l">⏳ Ожидают администратора</div></div>
+      <div class="stat"><div class="v">${st.accepted||0}</div><div class="l">✅ Приняты</div></div>
+      <div class="stat"><div class="v">${st.in_progress||0}</div><div class="l">🔄 Администратор подключён</div></div>
+      <div class="stat ok"><div class="v">${st.completed||0}</div><div class="l">✔️ Завершены</div></div>
+    </div>
+    <div class="stack">${d.requests.length?d.requests.map(r=>`<div class="card">
+      <div class="t-head"><h2>${esc(r.id)}</h2>
+        <span class="b ${r.status==='WAITING'?'p-high':(r.status==='COMPLETED'?'b-auto':'s-in_progress')}">${esc(r.status_label)}</span>
+        ${langB(r.language||'ru')}
+        <span class="b b-muted">Игрок: ${esc(r.player_nickname||'Гость')}</span>
+        <span class="b b-muted">Сервер: ${r.server!=null?'#'+esc(r.server):'—'}</span>
+        ${r.ticket_id?`<a class="b b-cat" href="#junior/${encodeURIComponent(r.ticket_id)}">Тикет ${esc(r.ticket_id)}</a>`:''}
+        <span class="small muted">${fmtTime(r.created_at)}</span>
+      </div>
+      <div class="msg" style="margin-bottom:10px"><div class="tx">${esc(r.context_summary||'Игрок запросил живого администратора')}</div></div>
+      <div class="actions">
+        ${r.status==='WAITING'?`<button class="btn primary sm" data-ar-act="accept" data-id="${esc(r.id)}">✅ Принять вызов</button>`:''}
+        ${r.status==='ACCEPTED'?`<button class="btn ok sm" data-ar-act="start" data-id="${esc(r.id)}">🔄 Подключиться к игроку</button>`:''}
+        ${['WAITING','ACCEPTED','IN_PROGRESS'].includes(r.status)?`<button class="btn sm" data-ar-act="complete" data-id="${esc(r.id)}">✔️ Завершить</button>`:''}
+      </div>
+    </div>`).join(''):'<div class="card empty">Прямых вызовов пока нет.</div>'}</div>`;
+
+  $('#arNew').onclick=()=>openModal({
+    title:'Симулировать запрос живого администратора от игрока', submit:'Отправить запрос',
+    body:`<div class="field"><label>Никнейм игрока</label><input name="nick" class="input" value="Damir_Astana" required></div>
+      <div class="field"><label>Сервер</label><input name="server" type="number" class="input" value="4" required></div>
+      <div class="field"><label>Сообщение игрока (на RU / KK / UZ / EN)</label><textarea name="text" class="textarea" rows="3" required>Сәлем! Админ шақырыңызшы, мені 4 серверде алдап кетті, тірі адам керек!</textarea></div>`,
+    onSubmit:async(fd)=>{
+      const res=await api('POST','/triage',{
+        kind:'complaint', nickname:fd.get('nick'), server:parseInt(fd.get('server')||'1',10),
+        messages:[{role:'player',text:fd.get('text'),attachments:0}]
+      });
+      toast(`Создан прямой вызов ${res.admin_request_id||'админа'} и отправлен в Telegram`);
+      refreshCounts();
+      PAGES['admin-calls'](main);
+    }
+  });
+
+  main.querySelectorAll('[data-ar-act]').forEach(btn=>btn.onclick=async()=>{
+    const act=btn.dataset.arAct, id=btn.dataset.id;
+    try{
+      await api('POST',`/api/admin-requests/${encodeURIComponent(id)}/${act}`,{request_id:id,admin_id:S.user.id,admin_name:S.user.name,note:'Обработано через Dashboard'});
+      toast(`Статус вызова ${id} обновлён`);
+      refreshCounts();
+      PAGES['admin-calls'](main);
+    }catch(e){ toast(e.message,'error'); }
+  });
+};
+
+/* ===================== 8. Evidence Analysis Page ===================== */
+PAGES.evidence=async(main)=>{
+  main.innerHTML=`<div class="page-head"><div><h1>Анализ доказательств (OCR скриншотов и видеокадров)</h1><p>Поддержка JPG, PNG, MP4, WEBM. Распознавание текста, извлечение игровых ID, никнеймов, /time и сверка с текстом жалобы.</p></div></div>
+  <div class="split">
+    <section class="card">
+      <h2>Загрузка медиафайла или выбор тестового сценария</h2>
+      <div class="field"><label>Быстрые пресеты для демонстрации</label>
+        <div class="actions">
+          <button type="button" class="btn sm" id="evPreset1">✅ Скриншот PNG с /time (совпадает)</button>
+          <button type="button" class="btn sm warn" id="evPreset2">⚠️ Противоречие (другой сервер и ник)</button>
+          <button type="button" class="btn sm" id="evPreset3">🎬 Видео MP4 (жалоба на читы)</button>
+        </div>
+      </div>
+      <div class="field"><label for="evText">Описание жалобы игрока (для сверки с доказательствами)</label>
+        <textarea id="evText" class="textarea" rows="4">Игрок Ivan_Grozny [142] оскорбил меня в чате на 5 сервере, скриншот с /time приложил</textarea>
+      </div>
+      <div class="field"><label for="evCat">Категория жалобы</label>
+        <select id="evCat" class="select">${S.meta.categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label for="evOcr">OCR-текст на скриншоте / в титрах видео (или загрузите реальный файл ниже)</label>
+        <textarea id="evOcr" class="textarea" rows="3">Grand Mobile | Server #5 | /time 14:32:10 | [Chat] Ivan_Grozny [142]: ты нуб</textarea>
+      </div>
+      <div class="field"><label for="evFile">Или загрузите реальный файл (JPG, PNG, MP4, WEBM)</label>
+        <input id="evFile" type="file" accept=".jpg,.jpeg,.png,.mp4,.webm" class="input">
+      </div>
+      <div class="actions"><button type="button" class="btn primary" id="evRun">${ic('camera')}Проанализировать и сверить</button></div>
+    </section>
+    <section id="evOut"><div class="card empty">Нажмите «Проанализировать и сверить» или выберите пресет слева.</div></section>
+  </div>`;
+
+  let presetFilename='screenshot_srv5_time.png';
+  $('#evPreset1').onclick=()=>{
+    presetFilename='screenshot_srv5_time.png';
+    $('#evCat').value='insult_toxicity';
+    $('#evText').value='Игрок Ivan_Grozny [142] оскорбил меня в чате на 5 сервере, скриншот с /time приложил';
+    $('#evOcr').value='Grand Mobile | Server #5 | /time 14:32:10 | Ivan_Grozny [142]: оскорбление в чате';
+    runEv();
+  };
+  $('#evPreset2').onclick=()=>{
+    presetFilename='wrong_evidence.jpg';
+    $('#evCat').value='rp_violation';
+    $('#evText').value='Игрок Maksim_Killer [505] убил меня без причины на 5 сервере, видео приложил';
+    $('#evOcr').value='Grand Mobile | Server #2 | Oleg_Mirny [119]: привет всем';
+    runEv();
+  };
+  $('#evPreset3').onclick=()=>{
+    presetFilename='cheat_speedhack_capture.mp4';
+    $('#evCat').value='cheating_exploits';
+    $('#evText').value='Читер Dark_Hack [666] летает на спидхаке на 3 сервере, видеозапись приложил';
+    $('#evOcr').value='Grand Mobile | Server #3 | /time 19:05:44 | Dark_Hack [666] speedhack telemetry';
+    runEv();
+  };
+
+  async function runEv(){
+    const out=$('#evOut'); out.innerHTML=loadingHTML('Анализ медиаконтейнера и OCR…');
+    try{
+      const fileInput=$('#evFile');
+      let rep;
+      if(fileInput.files && fileInput.files[0]){
+        const fd=new FormData();
+        fd.append('file', fileInput.files[0]);
+        fd.append('complaint_text', $('#evText').value);
+        fd.append('category', $('#evCat').value);
+        fd.append('ocr_hint', $('#evOcr').value);
+        const r=await fetch('/api/evidence/upload',{method:'POST',headers:{'X-Demo-User':S.userId},body:fd});
+        rep=await r.json();
+      } else {
+        rep=await api('POST','/api/evidence/analyze',{
+          complaint_text:$('#evText').value,
+          category:$('#evCat').value,
+          files:[{filename:presetFilename, ocr_text:$('#evOcr').value, metadata:{duration_sec:18.5,width:1920,height:1080}}]
+        });
+      }
+      renderEv(rep);
+    }catch(e){ out.innerHTML=errBox(e); }
+  }
+  function renderEv(r){
+    const f0=(r.files&&r.files[0])||{};
+    const va=f0.video_analysis;
+    $('#evOut').innerHTML=`<div class="stack">
+      <div class="banner ${r.is_consistent?'auto':'human'}">
+        <b>Статус верификации: ${r.is_consistent?'✅ Доказательства согласованы с жалобой':'⚠️ Выявлены противоречия между текстом и доказательствами'} (Consistency: ${Math.round((r.consistency_score||0)*100)}%)</b>
+        ${esc(r.admin_report||'')}
+      </div>
+      <div class="card"><h3>Извлечённые данные из медиа (${esc(f0.format||'PNG')} · ${esc(f0.resolution||'1920x1080')})</h3>
+        <div class="kv">
+          <div><span>Формат / Тип</span><b>${esc(f0.format)} (${esc(f0.media_kind)})</b></div>
+          <div><span>Распознанные никнеймы</span><b>${(r.extracted_nicknames||[]).join(', ')||'—'}</b></div>
+          <div><span>Распознанные ID</span><b>${(r.extracted_player_ids||[]).join(', ')||'—'}</b></div>
+          <div><span>Сервер на медиа</span><b>${(r.extracted_servers||[]).map(s=>'#'+s).join(', ')||'—'}</b></div>
+          <div><span>Отметка /time</span><b style="color:${r.has_time_stamp?'#6ee7b7':'#fcd34d'}">${r.has_time_stamp?'Есть (/time подтверждён)':'Отсутствует'}</b></div>
+          <div><span>OCR движок</span><b>${esc(f0.ocr_engine||'builtin_hud_ocr')}</b></div>
+        </div>
+        ${f0.ocr_text?`<div class="msg" style="margin-top:8px"><div class="meta"><span>Распознанный текст (OCR)</span></div><div class="tx small">${esc(f0.ocr_text)}</div></div>`:''}
+      </div>
+      ${va?`<div class="card"><h3>🎬 Анализ видеокадров (${va.duration_sec} сек · ${va.total_frames_estimated} кадров)</h3>
+        <ul class="timeline">${(va.checkpoints||[]).map(cp=>`<li><b>${cp.timestamp_sec} сек (кадр #${cp.frame_index})</b> — ${esc(cp.description)}</li>`).join('')}</ul>
+      </div>`:''}
+      ${(r.contradictions&&r.contradictions.length)?`<div class="card"><h3>⚠️ Выявленные противоречия</h3><ul class="reasons">${r.contradictions.map(c=>`<li style="color:#fca5a5">${esc(c)}</li>`).join('')}</ul></div>`:''}
+      ${(r.matches&&r.matches.length)?`<div class="card"><h3>✅ Подтверждённые совпадения</h3><ul class="reasons">${r.matches.map(m=>`<li style="color:#6ee7b7">${esc(m)}</li>`).join('')}</ul></div>`:''}
+    </div>`;
+  }
+  $('#evRun').onclick=runEv;
+  runEv();
+};
+
+/* ===================== 6. Anti-Fraud Page ===================== */
+PAGES.fraud=async(main)=>{
+  const d=await api('GET','/api/fraud/stats');
+  const st=d.stats||{};
+  const items=d.suspicious_complaints||[];
+  main.innerHTML=`<div class="page-head"><div><h1>Защита от фейковых жалоб (Anti-Fraud)</h1><p>Обнаружение повторных и массовых обращений, противоречий между текстом и доказательствами и оценка Fraud Risk Score.</p></div></div>
+    <div class="banner warn" style="margin-bottom:14px"><b>🛡️ Правило безопасности: Автоматические наказания строго заблокированы</b>${esc(d.disclaimer)}</div>
+    <div class="stats">
+      <div class="stat"><div class="v">${st.total_analyzed||0}</div><div class="l">Проверено обращений</div></div>
+      <div class="stat hot"><div class="v">${st.suspicious_count||0}</div><div class="l">Подозрительных жалоб</div></div>
+      <div class="stat"><div class="v">${st.contradictions_detected||0}</div><div class="l">С противоречиями</div></div>
+      <div class="stat"><div class="v">${st.duplicate_hashes||0}</div><div class="l">Дубликатов текста</div></div>
+      <div class="stat ok"><div class="v">0</div><div class="l">Авто-наказаний выдано</div></div>
+    </div>
+    <div class="card"><h2>Подозрительные обращения, требующие проверки администратором</h2>
+      ${items.length?`<div class="table-wrap"><table><thead><tr><th><span class="th">Тикет</span></th><th><span class="th">Заявитель</span></th><th><span class="th">Обвиняемый</span></th><th><span class="th">Fraud Risk</span></th><th><span class="th">Причины подозрения / Противоречия</span></th></tr></thead>
+      <tbody>${items.map(it=>`<tr onclick="location.hash='#junior/${encodeURIComponent(it.ticket_id)}'">
+        <td class="id"><a href="#junior/${encodeURIComponent(it.ticket_id)}">${esc(it.ticket_id)}</a><div class="snip">${esc(it.snippet||'')}</div></td>
+        <td>${esc(it.reporter||'—')}</td>
+        <td>${esc(it.offender||'—')}</td>
+        <td><span class="b ${it.fraud_risk_score>=60?'p-critical':'p-high'}">${it.fraud_risk_score}/100</span></td>
+        <td class="small">${(it.reasons||[]).map(r=>`• ${esc(r)}`).join('<br>')}</td>
+      </tr>`).join('')}</tbody></table></div>`:'<div class="empty">Подозрительных жалоб с высоким риском не обнаружено.</div>'}
+    </div>`;
+};
+
+/* ===================== 7. Repeat Offenders Page ===================== */
+PAGES.offenders=async(main, arg)=>{
+  const d=await api('GET','/api/repeat-offenders?min_complaints=1');
+  const apiSt=d.api_status||{};
+  main.innerHTML=`<div class="page-head"><div><h1>Поиск повторных нарушителей</h1><p>История жалоб по игровому ID и никнейму, количество подтверждённых нарушений, история наказаний и разделение подтверждённых/неподтверждённых жалоб.</p></div></div>
+    <div class="banner info" style="margin-bottom:14px"><b>🔌 Статус подключения к игровому API Grand Mobile</b>${esc(apiSt.disclosure||'')}</div>
+    <div class="filters">
+      <input id="offQ" class="input" placeholder="Введите никнейм (напр. Player_777, ScammerPro, Ivan_Grozny) или игровой ID (напр. 777, 1042, 142)…" value="${esc(arg||'')}">
+      <button type="button" class="btn primary" id="offBtn">Найти по нику или ID</button>
+      <button type="button" class="btn sm" data-q="777">ID: 777 (Player_777)</button>
+      <button type="button" class="btn sm" data-q="1042">ID: 1042 (ScammerPro)</button>
+      <button type="button" class="btn sm" data-q="142">ID: 142 (Ivan_Grozny)</button>
+    </div>
+    <div id="offCard" style="margin-bottom:16px"></div>
+    <div class="card"><h2>Сводный список проверяемых игроков и рецидивистов (${d.count})</h2>
+      <div class="table-wrap"><table><thead><tr><th><span class="th">Никнейм</span></th><th><span class="th">Игровой ID</span></th><th><span class="th">Сервер</span></th><th><span class="th">Подтверждено нарушений</span></th><th><span class="th">Неподтверждённых жалоб</span></th><th><span class="th">Отклонено</span></th><th><span class="th">Уровень риска</span></th></tr></thead>
+      <tbody>${(d.offenders||[]).map(o=>`<tr data-nick="${esc(o.nickname)}">
+        <td><b>${esc(o.nickname)}</b> ${o.is_demo?'<span class="b b-muted">demo</span>':''}</td>
+        <td class="id">${o.player_id!=null?'#'+esc(o.player_id):'—'}</td>
+        <td>${o.server!=null?'#'+esc(o.server):'—'}</td>
+        <td><span class="b ${o.confirmed_violations>0?'p-high':'b-auto'}">${o.confirmed_violations} подтверждено</span></td>
+        <td><span class="b b-muted">${o.unconfirmed_complaints||0} на проверке</span></td>
+        <td>${o.rejected_complaints||0}</td>
+        <td>${prioB(o.risk_level||'low')}</td>
+      </tr>`).join('')}</tbody></table></div>
+    </div>`;
+
+  async function searchPlayer(q){
+    if(!q) return;
+    const box=$('#offCard'); box.innerHTML=loadingHTML('Поиск по базе игроков…');
+    try{
+      const p=await api('GET','/api/player-history/search?q='+encodeURIComponent(q));
+      if(!p.found){ box.innerHTML=`<div class="card empty">По запросу «${esc(q)}» подтверждённых или неподтверждённых жалоб не найдено.</div>`; return; }
+      box.innerHTML=`<div class="card" style="border-color:var(--accent)">
+        <div class="t-head"><h2>${esc(p.nickname)}</h2>
+          <span class="b b-cat">Игровой ID: ${p.player_id!=null?esc(p.player_id):'не указан'}</span>
+          <span class="b b-muted">Сервер: ${p.server!=null?'#'+esc(p.server):'—'}</span>
+          ${prioB(p.risk_level||'low')}
+          ${p.is_repeat_offender?'<span class="b p-critical">🔁 Повторный нарушитель</span>':''}
+        </div>
+        <div class="kv" style="margin-bottom:12px">
+          <div><span>✅ Подтверждённые нарушения</span><b style="color:#fca5a5">${p.confirmed_violations}</b></div>
+          <div><span>⏳ Неподтверждённые жалобы</span><b style="color:#fcd34d">${p.unconfirmed_complaints||0}</b></div>
+          <div><span>❌ Отклонённые жалобы</span><b style="color:#6ee7b7">${p.rejected_complaints||0}</b></div>
+          <div><span>Всего обращений</span><b>${p.total_complaints}</b></div>
+        </div>
+        ${(p.repeat_violations&&p.repeat_violations.length)?`<div class="banner warn" style="margin-bottom:10px"><b>Выявленные повторяющиеся нарушения</b>${p.repeat_violations.map(rv=>`• ${esc(rv)}`).join('<br>')}</div>`:''}
+        <div class="grid2">
+          <div><h3>История подтверждённых наказаний (${(p.punishment_history||[]).length})</h3>
+            ${(p.punishment_history&&p.punishment_history.length)?`<ul class="timeline">${p.punishment_history.map(ph=>`<li><b>${esc(ph.type)}</b> (п. ${esc(ph.rule)}) — админ: ${esc(ph.admin)}<div class="when">${esc(ph.date)}</div></li>`).join('')}</ul>`:'<div class="small muted">Подтверждённых наказаний нет.</div>'}
+          </div>
+          <div><h3>Неподтверждённые жалобы (не являются доказательством вины)</h3>
+            ${(p.unconfirmed_list&&p.unconfirmed_list.length)?`<ul class="timeline">${p.unconfirmed_list.map(u=>`<li>Тикет <b>${esc(u.ticket_id)}</b> · ${esc(u.category)}<div class="when">${esc(u.date||'')} · ${esc(u.note||'На рассмотрении')}</div></li>`).join('')}</ul>`:'<div class="small muted">Неподтверждённых жалоб нет.</div>'}
+          </div>
+        </div>
+      </div>`;
+    }catch(e){ box.innerHTML=errBox(e); }
+  }
+  $('#offBtn').onclick=()=>searchPlayer($('#offQ').value.trim());
+  $('#offQ').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); searchPlayer($('#offQ').value.trim()); }};
+  main.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ $('#offQ').value=b.dataset.q; searchPlayer(b.dataset.q); });
+  main.querySelectorAll('tbody tr[data-nick]').forEach(tr=>tr.onclick=()=>{ $('#offQ').value=tr.dataset.nick; searchPlayer(tr.dataset.nick); });
+  if(arg) searchPlayer(arg);
+};
+
+/* ===================== 9. AI Admin Assistant ===================== */
 PAGES.assistant=async(main,arg)=>{
   const tickets=(await api('GET','/api/ws/tickets?scope=all&sort=created_at')).tickets;
   const A=S.assistant; if(arg){ A.mode='ticket'; A.ticketId=arg; }
-  main.innerHTML=`<div class="page-head"><div><h1>AI Report Assistant</h1><p>Анализ репорта: язык, категория и приоритет по taxonomy.json, факты, дубликаты, пункты rules.json с проверкой ID и безопасный черновик.</p></div></div>
+  main.innerHTML=`<div class="page-head"><div><h1>AI Admin Assistant</h1><p>Краткое содержание жалобы, поиск правил Grand Mobile, анализ доказательств, похожие рассмотренные обращения, рекомендации и генерация ответов на языке игрока (RU/KK/UZ/EN).</p></div></div>
   <div class="split" style="grid-template-columns:minmax(320px,.8fr) minmax(0,1.2fr)">
     <section class="card" aria-label="Входные данные">
       <div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-mode="text">Вставить текст</button><button type="button" class="tab" role="tab" data-mode="ticket">Открыть тикет</button></div>
       <div id="aText">
         <div class="field"><label for="aKind">Тип обращения</label><select id="aKind" class="select" style="width:100%">
           <option value="complaint">Жалоба</option><option value="question">Вопрос</option><option value="appeal">Обжалование / разбан</option><option value="bug">Технический баг</option></select></div>
-        <div class="field"><label for="aInput">Текст репорта игрока</label><textarea id="aInput" class="textarea" rows="8" placeholder="Вставьте текст обращения игрока…"></textarea></div>
+        <div class="field"><label for="aInput">Текст репорта игрока (понимает RU/KK/UZ/EN, сленг и опечатки)</label><textarea id="aInput" class="textarea" rows="7" placeholder="Вставьте текст обращения игрока…"></textarea></div>
         <div class="field"><label for="aAtt">Количество вложений (скриншоты/видео)</label><input id="aAtt" type="number" min="0" max="50" value="0" class="input" style="width:120px"></div>
       </div>
       <div id="aTicket" hidden>
@@ -687,7 +1120,7 @@ PAGES.assistant=async(main,arg)=>{
         ${tickets.length?'':'<div class="muted small">Нет доступных тикетов.</div>'}
       </div>
       <div class="actions"><button type="button" class="btn primary" id="aRun">${ic('assistant')}Проанализировать</button><button type="button" class="btn" id="aClear">Очистить</button></div>
-      <p class="small muted" style="margin-top:10px">Ctrl+Enter — запустить анализ. Анализ не сохраняется, пока вы не нажмёте «Сохранить».</p>
+      <p class="small muted" style="margin-top:10px">Финальное решение всегда остаётся за администратором.</p>
       <div class="card" style="margin-top:14px;background:var(--bg)"><h3>История сохранений</h3><div id="aHist">${loadingHTML()}</div></div>
     </section>
     <section id="aOut" aria-live="polite"><div class="card empty">Результат анализа появится здесь. Вставьте текст репорта или выберите тикет.</div></section>
@@ -717,30 +1150,35 @@ PAGES.assistant=async(main,arg)=>{
     finally{ $('#aRun').disabled=false; }
   }
   function renderResult(r){
-    const tr=r.triage, f=tr.facts||{};
-    const dupBlock=(tr.is_spam||tr.is_duplicate||(r.similar_tickets&&r.similar_tickets.length))
-      ? `<div class="banner warn"><b>Спам / дубликаты</b>${tr.is_spam?'Признаки спама или флуда.<br>':''}${tr.is_duplicate?'Повтор ранее отправленного обращения.<br>':''}
-         ${(r.similar_tickets||[]).map(s=>`Похоже на <a href="#junior/${encodeURIComponent(s.id)}">${esc(s.id)}</a> — сходство ${Math.round(s.similarity*100)}% (${esc(s.status_label)})`).join('<br>')}</div>`
-      : `<div class="banner auto"><b>${ic('check')} Спам и дубликаты не обнаружены</b>Похожих обращений в базе тикетов нет.</div>`;
+    const tr=r.triage, f=tr.facts||{}, cop=tr.ai_summary||{};
     const unknownVer=(r.rule_verification||[]);
+    const similarResolved = cop.similar_resolved_cases || [];
+    const decRecs = cop.decision_recommendations || [];
     $('#aOut').innerHTML=`<div class="stack">
-      <div class="card"><h3>Классификация</h3><div class="t-head">${langB(tr.language)}<span class="b b-cat">${esc(tr.category_name||tr.category)}</span>${prioB(tr.priority)}
-        <span class="b ${tr.needs_human?'b-human':'b-auto'}">needs_human: ${tr.needs_human}</span><span class="b b-muted">confidence: ${Number(tr.confidence).toFixed(2)}</span>
-        <span class="b b-muted">${tr.processing_time_ms} мс · $${Number(tr.cost_usd||0).toFixed(4)}</span></div>
-        <div class="small muted">Язык: ${esc(LANGS[tr.language]||tr.language)}${f.is_mixed_language?' (смешение: '+esc((f.detected_languages||[]).join(', '))+')':''} · категория и приоритет — из taxonomy.json</div></div>
+      <div class="card"><h3>Классификация и Confidence Score</h3><div class="t-head">${langB(tr.language)}<span class="b b-cat">${esc(tr.category_name||tr.category)}</span>
+        ${tr.subcategory_name?`<span class="b b-subcat">${esc(tr.subcategory_name)}</span>`:''}
+        ${prioB(tr.priority)}
+        <span class="b ${tr.needs_human?'b-human':'b-auto'}">${tr.needs_human?'Передано администрации':'Авто-обработка ИИ'}</span>
+        <span class="b b-muted">Confidence: ${tr.confidence_pct||Math.round((tr.confidence||0)*100)}%</span></div>
+        <div class="msg" style="margin-top:8px"><div class="tx small">${esc(cop.summary||'')}</div></div>
+      </div>
       ${humanBanner(tr)}
-      ${dupBlock}
-      <div class="card"><h3>Найденные пункты rules.json и проверка ID <span class="b b-cat">${(tr.cited_rules||[]).length}</span></h3>${rulesHTML(tr.cited_rules, unknownVer)}
-        ${unknownVer.length?`<div class="small muted" style="margin-top:8px">Проверено ID: ${unknownVer.map(v=>`<span class="${v.exists?'ver-ok':'ver-bad'}">${esc(v.id)} ${v.exists?'✓':'✗'}</span>`).join(' · ')}</div>`:''}</div>
+      ${decRecs.length?`<div class="card"><h3>Рекомендации по возможным решениям (финальное решение за администратором)</h3>
+        <div class="stack">${decRecs.map(dr=>`<div class="msg"><b class="small">${esc(dr.label)}</b><div class="small muted">${esc(dr.reason)}</div></div>`).join('')}</div>
+      </div>`:''}
+      ${similarResolved.length?`<div class="card"><h3>Похожие рассмотренные обращения (${similarResolved.length})</h3>
+        <div class="stack">${similarResolved.map(sc=>`<div class="msg"><div class="meta"><span>Прецедент ${esc(sc.case_id)} · п. ${esc(sc.rule_id)}</span><span>сходство ${sc.similarity_pct}%</span></div><div class="small"><b>${esc(sc.title)}</b><br>${esc(sc.resolution)}</div></div>`).join('')}</div>
+      </div>`:''}
+      <div class="card"><h3>Найденные пункты rules.json и проверка ID <span class="b b-cat">${(tr.cited_rules||[]).length}</span></h3>${rulesHTML(tr.cited_rules, unknownVer)}</div>
       <div class="card"><h3>Извлечённые факты</h3>${factsHTML(f)}</div>
       <div class="card"><h3>Черновик ответа на языке игрока (${esc(tr.language)})</h3>
-        <label class="sr-only" for="aDraft">Черновик</label><textarea id="aDraft" class="textarea" rows="7">${esc(tr.draft_response)}</textarea>
+        <label class="sr-only" for="aDraft">Черновик</label><textarea id="aDraft" class="textarea" rows="6">${esc(tr.draft_response)}</textarea>
         <div class="actions" style="margin-top:10px"><button class="btn primary" id="aCopy">${ic('copy')}Скопировать ответ</button>
           <button class="btn" id="aRegen">${ic('refresh')}Перегенерировать</button>
           <button class="btn ok" id="aSave">${ic('save')}${r.ticket_id?'Сохранить в тикет '+esc(r.ticket_id):'Сохранить как новый тикет'}</button>
           ${r.ticket_id?`<a class="btn" href="#junior/${encodeURIComponent(r.ticket_id)}">Открыть карточку</a>`:''}</div>
-        <p class="small muted" style="margin-top:6px">Черновик не отправляется игроку автоматически. Отправка, эскалация и решения — в карточке тикета согласно вашей роли.</p></div>
-      <div class="card"><h3>Обоснование (reasons)</h3><ul class="reasons">${(tr.reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+      </div>
+      <div class="card"><h3>Обоснование классификации (reasons)</h3><ul class="reasons">${(tr.reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
     </div>`;
     $('#aCopy').onclick=()=>copyText($('#aDraft').value);
     $('#aRegen').onclick=run;
@@ -759,7 +1197,7 @@ PAGES.assistant=async(main,arg)=>{
 /* ===================== Rules ===================== */
 PAGES.rules=async(main)=>{
   const d=await api('GET','/api/ws/rules');
-  main.innerHTML=`<div class="page-head"><div><h1>База правил</h1><p>Источник: ${esc(d.source)} · ${d.count} пунктов · только чтение. Изменение правил через панель не предусмотрено ни для одной роли.</p></div></div>
+  main.innerHTML=`<div class="page-head"><div><h1>База правил Grand Mobile</h1><p>Источник: ${esc(d.source)} · ${d.count} пунктов · только чтение.</p></div></div>
     <div class="filters"><input id="rq" class="input" placeholder="Поиск по ID, заголовку, тексту… ( / )"><select id="rc" class="select" aria-label="Категория"><option value="">Все категории</option>${S.meta.categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
     <div id="rList" class="stack"></div>`;
   const render=()=>{
@@ -773,22 +1211,25 @@ PAGES.rules=async(main)=>{
 
 /* ===================== Analytics ===================== */
 PAGES.analytics=async(main)=>{
-  const a=await api('GET','/api/ws/analytics');
-  const bars=(obj,labelFn)=>{ const total=Object.values(obj).reduce((s,v)=>s+v,0)||1;
-    return Object.entries(obj).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`<div class="bar-row"><span class="nm" title="${esc(labelFn(k))}">${esc(labelFn(k))}</span><div class="tr"><div class="fl" style="width:${Math.max(3,v/total*100)}%"></div></div><b>${v}</b></div>`).join('')||'<div class="muted small">Нет данных</div>'; };
-  main.innerHTML=`<div class="page-head"><div><h1>Аналитика</h1><p>${a.team?'Командная аналитика':'Аналитика по доступным вам обращениям'} · ${a.visible_total} обращений</p></div></div>
+  const [a, fb]=await Promise.all([api('GET','/api/ws/analytics'), api('GET','/api/feedback/stats')]);
+  const eff=a.ai_effectiveness||{};
+  const bars=(obj,labelFn)=>{ const total=Object.values(obj||{}).reduce((s,v)=>s+v,0)||1;
+    return Object.entries(obj||{}).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`<div class="bar-row"><span class="nm" title="${esc(labelFn(k))}">${esc(labelFn(k))}</span><div class="tr"><div class="fl" style="width:${Math.max(3,v/total*100)}%"></div></div><b>${v}</b></div>`).join('')||'<div class="muted small">Нет данных</div>'; };
+  main.innerHTML=`<div class="page-head"><div><h1>Аналитика эффективности ИИ</h1><p>${a.visible_total} обращений · Мониторинг точности классификации, скорости триажа и Feedback Loop</p></div></div>
     <div class="stats">
-      <div class="stat"><div class="v">${a.processing.total_processed}</div><div class="l">Запусков триажа в сессии</div></div>
-      <div class="stat"><div class="v">${a.processing.escalation_rate_pct}%</div><div class="l">Доля needs_human по ИИ</div></div>
-      <div class="stat"><div class="v">${a.processing.avg_processing_time_ms} / ${a.processing.p95_processing_time_ms}</div><div class="l">Среднее / p95, мс (лимит p95 ≤ 5000)</div></div>
-      <div class="stat"><div class="v">$${Number(a.processing.avg_cost_usd||0).toFixed(4)}</div><div class="l">Стоимость на обращение (лимит $0.002)</div></div>
+      <div class="stat ok"><div class="v">${eff.avg_confidence_pct||0}%</div><div class="l">Средний Confidence Score</div></div>
+      <div class="stat ok"><div class="v">${eff.auto_handled_rate_pct||0}%</div><div class="l">Авто-обработано ИИ</div></div>
+      <div class="stat"><div class="v">${fb.ai_accuracy_pct!=null?fb.ai_accuracy_pct:100}%</div><div class="l">Точность по Feedback Loop (${fb.total_feedback||0})</div></div>
+      <div class="stat"><div class="v">${a.processing.avg_processing_time_ms} / ${a.processing.p95_processing_time_ms}</div><div class="l">Среднее / p95 время, мс</div></div>
+      <div class="stat"><div class="v">$${Number(a.processing.avg_cost_usd||0).toFixed(4)}</div><div class="l">Средняя стоимость</div></div>
     </div>
     <div class="grid2">
       <div class="card"><h2>По статусам</h2>${bars(a.by_status,k=>S.meta.statuses[k]||k)}</div>
       <div class="card"><h2>По приоритетам</h2>${bars(a.by_priority,k=>PRIO[k]||k)}</div>
-      <div class="card" style="grid-column:1/-1"><h2>По категориям</h2>${bars(a.by_category,catName)}</div>
+      <div class="card"><h2>По категориям</h2>${bars(a.by_category,catName)}</div>
+      <div class="card"><h2>По подкатегориям нарушений</h2>${bars(a.by_subcategory,k=>k)}</div>
     </div>
-    ${a.team?`<div class="table-wrap" style="margin-top:14px"><table><caption>Команда</caption><thead><tr><th scope="col"><span class="th">Сотрудник</span></th><th scope="col"><span class="th">Роль</span></th><th scope="col"><span class="th">Открытые</span></th><th scope="col"><span class="th">Завершённые</span></th><th scope="col"><span class="th">Эскалаций</span></th><th scope="col"><span class="th">Действий</span></th></tr></thead>
+    ${a.team?`<div class="table-wrap" style="margin-top:14px"><table><caption>Команда администраторов</caption><thead><tr><th scope="col"><span class="th">Сотрудник</span></th><th scope="col"><span class="th">Роль</span></th><th scope="col"><span class="th">Открытые</span></th><th scope="col"><span class="th">Завершённые</span></th><th scope="col"><span class="th">Эскалаций</span></th><th scope="col"><span class="th">Действий</span></th></tr></thead>
       <tbody>${a.team.map(u=>`<tr><td>${esc(u.name)}</td><td class="small">${u.role==='senior_admin'?'Старший':'Младший'}</td><td>${u.open}</td><td>${u.resolved}</td><td>${u.escalated_by}</td><td>${u.actions}</td></tr>`).join('')}</tbody></table></div>`
       :'<p class="muted small" style="margin-top:12px">Командная аналитика доступна только старшему администратору.</p>'}`;
 };
@@ -821,11 +1262,11 @@ PAGES.settings=async(main)=>{
     <label class="check"><input type="checkbox" name="junior_can_send_without_review" ${d.settings.junior_can_send_without_review?'checked':''}> Младшие могут отправлять ответы без проверки, если ИИ не требует человека</label>
     <label class="check"><input type="checkbox" checked disabled> Подтверждение наказания требует проверки доказательств человеком (не отключается)</label>
     <div class="actions" style="margin-top:10px"><button class="btn primary" type="submit">${ic('save')}Сохранить</button></div></form>
-  <div class="card"><h2>Система</h2><div class="kv">
+  <div class="card"><h2>Система и внешние интеграции</h2><div class="kv">
     <div><span>Режим</span><b>${d.system.demo_mode?'DEMO (без аутентификации)':'production'}</b></div>
     <div><span>LLM</span><b>${d.system.llm_enabled?'включена: '+esc(d.system.llm_model):'выключена (локальный генератор, $0)'}</b></div>
     <div><span>Источник правил</span><b>${esc(d.system.rules_source)} · ${d.system.rules_count} пунктов</b></div>
-    <div><span>Ключи API</span><b>Хранятся только на сервере (.env)</b></div></div>
+    <div><span>Ключи API и Telegram</span><b>Хранятся только в .env на сервере</b></div></div>
     <div class="actions" style="margin-top:12px"><button class="btn danger" type="button" id="resetDemo">${ic('refresh')}Сбросить демо-данные</button></div></div></div>`;
   $('#setForm').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
     try{ await api('PUT','/api/ws/settings',{junior_can_view_unassigned:fd.get('junior_can_view_unassigned')==='on',junior_can_send_without_review:fd.get('junior_can_send_without_review')==='on'}); toast('Настройки сохранены'); }
@@ -854,7 +1295,7 @@ async function boot(){
 }
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && $('#modalBg').classList.contains('open')) closeModal();
-  if(e.key==='/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){ const s=$('#fq')||$('#rq')||$('#aInput'); if(s){ e.preventDefault(); s.focus(); } }
+  if(e.key==='/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){ const s=$('#fq')||$('#rq')||$('#aInput')||$('#offQ'); if(s){ e.preventDefault(); s.focus(); } }
 });
 boot().catch(e=>{ $('#main').innerHTML=errBox(e); });
 </script>

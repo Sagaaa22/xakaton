@@ -1,5 +1,6 @@
 """
-Language detection, structured fact extraction, and spam/duplicate detection.
+Language detection, structured fact extraction (including in-game Player IDs, nicknames,
+media evidence types JPG/PNG/MP4/WEBM, slang/typo normalization), and spam/duplicate detection.
 """
 from collections import deque
 import hashlib
@@ -17,6 +18,7 @@ KAZAKH_WORDS = {
     "боқтап", "боқтады", "алдап", "кетті", "бар", "жоқ", "қалай", "қайда",
     "өтініш", "тіркедім", "көлік", "ақша", "баннан", "шығару", "дәлел",
     "шағым", "ереже", "неге", "ұрланды", "жатыр", "деген", "кезінде", "сату",
+    "админ", "шақыр", "шақырыңыз", "көмектесіңіз", "жазалаңыз", "өтірік",
 }
 
 UZBEK_WORDS = {
@@ -25,6 +27,7 @@ UZBEK_WORDS = {
     "iltimos", "bandan", "chiqaring", "nohaq", "akkauntimni", "serverda",
     "aldab", "ketdi", "yordam", "bering", "qanday", "qayerda", "pul",
     "qaytarish", "qilishdi", "xato", "ilova", "qildim", "ovozli", "chatda",
+    "chaqiring", "chaqir", "jonli", "firibgar", "mashina",
 }
 
 ENGLISH_WORDS = {
@@ -34,6 +37,7 @@ ENGLISH_WORDS = {
     "arrested", "rule", "violation", "cheater", "my", "me", "the", "and",
     "for", "with", "near", "spawn", "hospital", "open", "navigation", "jobs",
     "licenses", "dialogue", "car", "scammed", "hacked", "account", "crash",
+    "admin", "human", "support", "live", "exploit", "aimbot", "speedhack",
 }
 
 RUSSIAN_WORDS = {
@@ -44,11 +48,44 @@ RUSSIAN_WORDS = {
     "нарушил", "правило", "пункт", "приложил", "прикрепил", "прошу", "моего",
     "мой", "аккаунт", "взломали", "пропал", "пропали", "вылетает", "крашит",
     "командой", "открыть", "паспорт", "машину", "обмене", "сделки", "фрапс",
+    "позовите", "админа", "администратора", "живого", "читер", "багоюз",
 }
 
 STOPWORDS_NICK = {
     "Grand", "Mobile", "Server", "Admin", "Player", "Report", "Google",
     "Authenticator", "Android", "Xiaomi", "Poco", "Iphone", "Samsung",
+}
+
+# Dictionary of common gaming slang & frequent player typos -> canonical explanation
+SLANG_AND_TYPO_MAP: Dict[str, str] = {
+    "дм": "DM (убийство без причины)",
+    "рдм": "RDM (Random DeathMatch)",
+    "дб": "DB (таран/убийство машиной)",
+    "ск": "SK (SpawnKill)",
+    "тк": "TK (TeamKill)",
+    "пг": "PG (PowerGaming)",
+    "мг": "MG (MetaGaming)",
+    "рк": "RK (RevengeKill)",
+    "нонрп": "NonRP поведение",
+    "нрп": "NonRP нарушение",
+    "фрапс": "Видеозапись (Fraps)",
+    "откат": "Видеозапись (откат)",
+    "кинул": "Обман при сделке (Scam)",
+    "скамнул": "Мошенничество (Scam)",
+    "заскамил": "Мошенничество (Scam)",
+    "дюп": "Багоюз / клонирование предметов (Dupe)",
+    "багаюз": "Багоюз (опечатка -> багоюз)",
+    "аскарбл": "Оскорбление (опечатка)",
+    "оскарбл": "Оскорбление (опечатка)",
+    "чиитер": "Читер (опечатка)",
+    "спидхак": "SpeedHack (чит на скорость)",
+    "аимбот": "AimBot (чит на прицеливание)",
+    "гм": "GodMode (чит на бессмертие)",
+    "разбаньти": "Запрос на разбан (опечатка)",
+    "машыну": "Машину (опечатка)",
+    "доннат": "Донат (опечатка)",
+    "ппв": "Продан/Передан/Взломан аккаунт",
+    "ппив": "Покупка/продажа игровой валюты за реал",
 }
 
 
@@ -66,7 +103,6 @@ def detect_language(text: str) -> Tuple[str, bool, List[str]]:
         return "und", False, []
 
     lower_text = cleaned.lower()
-    # Normalize apostrophes for Uzbek matching
     norm_text = re.sub(r"[’ʻ`´]", "'", lower_text)
     words = re.findall(r"[a-zа-яёәіңғүұқөһў'-]+", norm_text)
 
@@ -96,15 +132,14 @@ def detect_language(text: str) -> Tuple[str, bool, List[str]]:
         if w_clean in RUSSIAN_WORDS:
             scores["ru"] += 2.5
 
-    # Suffix heuristics for Uzbek (-serverda, -band, -imni, -dilar, -yapti)
+    # Suffix heuristics for Uzbek
     uz_suffix_hits = len(
-        re.findall(r"\b[a-z']+(?:serverda|imni|qildi|yapti|chiqaring|bandan|skrinshot)\b", norm_text)
+        re.findall(r"\b[a-z']+(?:serverda|imni|qildi|yapti|chiqaring|bandan|skrinshot|chaqiring)\b", norm_text)
     )
     scores["uz"] += uz_suffix_hits * 2.5
 
     # Script fallback if no specific dictionary words matched
     if max(scores.values()) == 0.0:
-        # Check if gibberish (e.g. consonant cluster or keyboard mash or repeated single char)
         unique_chars = set(ch.lower() for ch in alpha_chars)
         if len(unique_chars) <= 2:
             return "und", False, []
@@ -115,7 +150,6 @@ def detect_language(text: str) -> Tuple[str, bool, List[str]]:
         else:
             return "und", False, []
     else:
-        # Add mild script baseline
         if cyrillic_count >= 4 and scores["ru"] > 0:
             scores["ru"] += 1.0
         if latin_count >= 4 and scores["en"] > 0:
@@ -128,9 +162,6 @@ def detect_language(text: str) -> Tuple[str, bool, List[str]]:
     if primary_score <= 0.0:
         return "und", False, []
 
-    # Check for genuine mixed-language usage (e.g. ru + en, kk + ru, uz + ru)
-    # Require secondary language to have at least 4.0 score (approx >= 2 distinct vocabulary hits)
-    # and at least 25% of primary language score.
     is_mixed = False
     detected_langs = [primary_lang]
     if secondary_score >= 4.0 and (secondary_score / primary_score) >= 0.25:
@@ -141,7 +172,7 @@ def detect_language(text: str) -> Tuple[str, bool, List[str]]:
 
 
 class TicketFactExtractor:
-    """Extracts structured facts, spam indicators, and duplicate signals from tickets."""
+    """Extracts structured facts, player IDs, nicknames, media types, and spam/duplicate signals."""
 
     def __init__(self, max_cache_size: int = 500) -> None:
         self._recent_hashes: Deque[str] = deque(maxlen=max_cache_size)
@@ -172,7 +203,7 @@ class TicketFactExtractor:
         combined = " ".join(texts)
         lower = combined.lower()
 
-        # 1. Check intra-ticket duplicate messages (user sent identical message multiple times)
+        # 1. Check intra-ticket duplicate messages
         if len(texts) >= 2:
             norm_msgs = [re.sub(r"\s+", " ", t.lower()) for t in texts]
             if len(set(norm_msgs)) < len(norm_msgs):
@@ -191,7 +222,7 @@ class TicketFactExtractor:
             self._recent_hashes.append(msg_hash)
             self._hash_set.add(msg_hash)
 
-        # 3. Check character repetition flood (e.g. "аааааааа", "11111111", "???????")
+        # 3. Check character repetition flood
         if re.search(r"(.)\1{6,}", lower):
             is_spam = True
             reasons.append("Обнаружен флуд повторяющимися символами")
@@ -210,7 +241,7 @@ class TicketFactExtractor:
                 reasons.append("Признаки спама, оффтопа или тестового флуда в тексте")
                 break
 
-        # 5. Very short meaningless text (only digits or punctuation)
+        # 5. Very short meaningless text
         alpha_count = sum(1 for c in combined if c.isalpha())
         if alpha_count < 3 and len(combined) > 0:
             is_spam = True
@@ -235,11 +266,32 @@ class TicketFactExtractor:
         combined_text = "\n".join(m.text for m in player_msgs if m.text)
         lang, is_mixed, detected_langs = detect_language(combined_text)
 
-        # 1. Attachments & Evidence
+        # 1. Attachments & Evidence types (including JPG, PNG, MP4, WEBM detection)
         attachments_count = sum(m.attachments_count for m in player_msgs)
+        if request.evidence_files:
+            attachments_count = max(attachments_count, len(request.evidence_files))
+
         evidence_types: List[str] = []
         if attachments_count > 0:
             evidence_types.append("attachments")
+
+        # Inspect attachment lists or evidence_files for media extensions
+        for m in player_msgs:
+            if isinstance(m.attachments, list):
+                for item in m.attachments:
+                    fname = item.get("filename", "") if isinstance(item, dict) else str(item)
+                    fl = fname.lower()
+                    if fl.endswith((".jpg", ".jpeg", ".png")) and "image_file" not in evidence_types:
+                        evidence_types.append("image_file")
+                    elif fl.endswith((".mp4", ".webm")) and "video_file" not in evidence_types:
+                        evidence_types.append("video_file")
+        if request.evidence_files:
+            for ef in request.evidence_files:
+                fl = str(ef.get("filename") or "").lower()
+                if fl.endswith((".jpg", ".jpeg", ".png")) and "image_file" not in evidence_types:
+                    evidence_types.append("image_file")
+                elif fl.endswith((".mp4", ".webm")) and "video_file" not in evidence_types:
+                    evidence_types.append("video_file")
 
         lower_text = combined_text.lower()
         has_url = bool(
@@ -258,24 +310,21 @@ class TicketFactExtractor:
             )
         )
         if not negated_evidence:
-            if re.search(r"(?:скрин\w*|skrinshot|screenshot)", lower_text):
+            if re.search(r"(?:скрин\w*|skrinshot|screenshot|\.png|\.jpg)", lower_text):
                 evidence_types.append("screenshot_mention")
-            if re.search(r"(?:видео\w*|фрапс\w*|откат\w*|video|fraps)", lower_text):
+            if re.search(r"(?:видео\w*|фрапс\w*|откат\w*|video|fraps|\.mp4|\.webm)", lower_text):
                 evidence_types.append("video_mention")
             if re.search(r"(?:чек\b|квитанц\w*|receipt)", lower_text):
                 evidence_types.append("receipt_mention")
 
-        # Crucial safety rule: actual evidence exists ONLY if attachments > 0 or media URL is provided
         has_evidence = (attachments_count > 0) or has_url
 
         # 2. Nicknames extraction
         nicknames: List[str] = []
-        # Standard RP nicknames with underscore: Name_Surname
         for match in re.findall(r"\b([A-Za-z][A-Za-z0-9]{1,15}_[A-Za-z0-9]{1,15})\b", combined_text):
             if match not in nicknames and match not in STOPWORDS_NICK:
                 nicknames.append(match)
 
-        # Contextual nicknames without underscore (e.g., "ник Anton", "игрок Baha")
         ctx_nick_patterns = [
             r"(?:игрок\w*|ник\w*|аккаунт\w*|админ\w*|player|ойыншы|o'yinchi|akkaunt\w*)\s+([A-Za-z][A-Za-z0-9_]{2,20})",
             r"\b([A-Za-z][A-Za-z0-9_]{2,20})\s+(?:деген\s+ойыншы|akkauntimni)",
@@ -285,7 +334,7 @@ class TicketFactExtractor:
                 if (
                     match not in nicknames
                     and match not in STOPWORDS_NICK
-                    and match.lower() not in {"без", "на", "за", "не", "он", "меня", "мой", "from", "with", "killed", "insulted"}
+                    and match.lower() not in {"без", "на", "за", "не", "он", "меня", "мой", "from", "with", "killed", "insulted", "id", "uid"}
                 ):
                     nicknames.append(match)
 
@@ -294,7 +343,6 @@ class TicketFactExtractor:
         if request.offender_nickname and request.offender_nickname not in nicknames:
             nicknames.append(request.offender_nickname)
 
-        # Determine offender vs reporter nickname
         offender_nick: Optional[str] = request.offender_nickname
         reporter_nick: Optional[str] = request.nickname
 
@@ -326,6 +374,34 @@ class TicketFactExtractor:
             else:
                 offender_nick = nicknames[0]
 
+        # 2b. In-game Player IDs extraction (e.g., "ID 142", "[142]", "id: 142", "айди 505")
+        player_ids: List[int] = []
+        id_patterns = [
+            r"\[(\d{1,5})\]",
+            r"\((?:id|айди|ид)\s*[:#-]?\s*(\d{1,6})\)",
+            r"\b(?:id|айди|ид|uid|статик)\s*[:#-]?\s*(\d{1,6})\b",
+            r"(?:игрок\w*|нарушител\w*)\s+#(\d{1,5})\b",
+        ]
+        for pat in id_patterns:
+            for m in re.findall(pat, lower_text):
+                pid = int(m)
+                if pid not in player_ids:
+                    player_ids.append(pid)
+
+        if request.player_id and request.player_id not in player_ids:
+            player_ids.insert(0, request.player_id)
+        if request.offender_id and request.offender_id not in player_ids:
+            player_ids.append(request.offender_id)
+
+        offender_id: Optional[int] = request.offender_id
+        reporter_id: Optional[int] = request.player_id
+        if not offender_id and player_ids:
+            if len(player_ids) == 1 and not reporter_id:
+                offender_id = player_ids[0]
+            elif len(player_ids) >= 2:
+                offender_id = player_ids[-1]
+                reporter_id = reporter_id or player_ids[0]
+
         # 3. Server extraction
         server_val: Optional[Any] = request.server
         if server_val is None:
@@ -350,7 +426,6 @@ class TicketFactExtractor:
                 if m not in mentioned_rules:
                     mentioned_rules.append(m)
 
-        # Also check conjunction like "п. 2.2 и 2.3"
         conj_matches = re.findall(
             r"(?:п\.|пункт\w*|правил\w*)\s*\d{1,3}\.\d{1,3}\s*(?:и|,|/)\s*(\d{1,3}\.\d{1,3})",
             lower_text,
@@ -374,14 +449,22 @@ class TicketFactExtractor:
             if cmd.lower() not in commands:
                 commands.append(cmd.lower())
 
-        # 7. Preserve extra input fields if present
+        # 7. Slang & Typos recognized
+        slang_detected: List[str] = []
+        for slang_key, desc in SLANG_AND_TYPO_MAP.items():
+            if re.search(rf"\b{re.escape(slang_key)}\w*\b", lower_text):
+                entry = f"{slang_key} → {desc}"
+                if entry not in slang_detected:
+                    slang_detected.append(entry)
+
+        # 8. Preserve extra input fields if present
         extra_fields: Dict[str, Any] = {}
         if request.extra:
             extra_fields.update(request.extra)
-        # Capture any arbitrary extra fields passed to TriageRequest
         known_keys = {
             "id", "ticket_id", "kind", "messages", "server", "nickname",
-            "offender_nickname", "regenerate", "extra",
+            "offender_nickname", "player_id", "offender_id", "evidence_files",
+            "regenerate", "extra",
         }
         for k, v in request.__dict__.items():
             if k not in known_keys and not k.startswith("_") and v is not None:
@@ -391,6 +474,9 @@ class TicketFactExtractor:
             nicknames=nicknames,
             offender_nickname=offender_nick,
             reporter_nickname=reporter_nick,
+            player_ids=player_ids,
+            offender_id=offender_id,
+            reporter_id=reporter_id,
             mentioned_rules=mentioned_rules,
             valid_mentioned_rules=valid_mentioned,
             unknown_mentioned_rules=unknown_mentioned,
@@ -402,7 +488,7 @@ class TicketFactExtractor:
             commands_mentioned=commands,
             is_mixed_language=is_mixed,
             detected_languages=detected_langs,
+            slang_or_typos_normalized=slang_detected,
             extra_fields=extra_fields,
         )
         return lang, facts
-

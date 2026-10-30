@@ -43,6 +43,11 @@ class TriageRequest(BaseModel):
     server: Optional[Union[int, str]] = Field(default=None, description="Optional game server ID/number")
     nickname: Optional[str] = Field(default=None, description="Optional player nickname")
     offender_nickname: Optional[str] = Field(default=None, description="Optional reported player nickname")
+    player_id: Optional[int] = Field(default=None, description="Optional reporter in-game ID")
+    offender_id: Optional[int] = Field(default=None, description="Optional offender in-game ID")
+    evidence_files: Optional[List[Dict[str, Any]]] = Field(
+        default=None, description="Optional list of media attachments (JPG, PNG, MP4, WEBM) or OCR metadata"
+    )
     regenerate: Optional[bool] = Field(default=False, description="Force fresh regeneration bypassing duplicate cache")
     extra: Optional[Dict[str, Any]] = Field(default=None, description="Any additional metadata")
 
@@ -63,6 +68,9 @@ class ExtractedFacts(BaseModel):
     nicknames: List[str] = Field(default_factory=list)
     offender_nickname: Optional[str] = None
     reporter_nickname: Optional[str] = None
+    player_ids: List[int] = Field(default_factory=list, description="Extracted in-game player IDs")
+    offender_id: Optional[int] = None
+    reporter_id: Optional[int] = None
     mentioned_rules: List[str] = Field(default_factory=list)
     valid_mentioned_rules: List[str] = Field(default_factory=list)
     unknown_mentioned_rules: List[str] = Field(default_factory=list)
@@ -74,6 +82,7 @@ class ExtractedFacts(BaseModel):
     commands_mentioned: List[str] = Field(default_factory=list)
     is_mixed_language: bool = False
     detected_languages: List[str] = Field(default_factory=list)
+    slang_or_typos_normalized: List[str] = Field(default_factory=list)
     extra_fields: Dict[str, Any] = Field(default_factory=dict)
 
     @validator("server", always=True)
@@ -101,6 +110,8 @@ class TriageResponse(BaseModel):
     language: str = Field(..., description="Detected language: ru, kk, uz, en, or und")
     category: str = Field(..., description="Category ID strictly from taxonomy.json")
     category_name: str = Field(default="", description="Human-readable category name")
+    subcategory: Optional[str] = Field(default=None, description="Specific violation subtype (cheats, dm_rdm, pg, mg, trade_scam, etc.)")
+    subcategory_name: Optional[str] = Field(default=None, description="Human-readable subcategory name")
     priority: str = Field(..., description="Priority ID strictly from taxonomy.json")
     is_spam: bool = False
     is_duplicate: bool = False
@@ -111,10 +122,13 @@ class TriageResponse(BaseModel):
     needs_human: bool = Field(..., description="Whether human moderator review is required")
     needs_human_reason: Optional[str] = Field(default=None, description="Explanation for human review requirement")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Triage confidence score [0.0, 1.0]")
-    reasons: List[str] = Field(default_factory=list, description="Reasoning steps and triggers")
+    confidence_pct: int = Field(default=0, ge=0, le=100, description="Confidence percentage 0-100%")
+    auto_handled: bool = Field(default=False, description="True if simple & safe ticket was handled automatically by AI")
+    routing_decision: str = Field(default="human_admin", description="Routing target: auto_handled | junior_admin | senior_admin")
+    reasons: List[str] = Field(default_factory=list, description="Reasoning steps and classification triggers")
     processing_time_ms: float = 0.0
     cost_usd: float = 0.0
-    # --- New AI feature fields ---
+    # --- AI & Copilot feature fields ---
     intent: Optional[str] = Field(default=None, description="Detected player intent")
     intent_label: Optional[str] = Field(default=None, description="Human-readable intent label")
     intent_confidence: Optional[float] = Field(default=None, description="Intent detection confidence")
@@ -124,7 +138,11 @@ class TriageResponse(BaseModel):
     fraud_reasons: List[str] = Field(default_factory=list, description="Fraud risk reasons")
     fraud_related_tickets: List[Dict[str, Any]] = Field(default_factory=list, description="Related tickets for fraud check")
     admin_request_id: Optional[str] = Field(default=None, description="Admin call request ID if player asked for admin")
+    admin_request_status: Optional[str] = Field(default=None, description="Status of live admin request (WAITING/ACCEPTED/etc.)")
+    assigned_admin: Optional[Dict[str, Any]] = Field(default=None, description="Distributed admin assigned to review")
+    telegram_notification: Optional[Dict[str, Any]] = Field(default=None, description="Telegram notification details if sent")
     player_history: Optional[Dict[str, Any]] = Field(default=None, description="Offender history card")
+    evidence_report: Optional[Dict[str, Any]] = Field(default=None, description="Evidence & OCR analysis report")
     ai_summary: Optional[Dict[str, Any]] = Field(default=None, description="Admin Copilot summary for operator")
 
 
@@ -144,6 +162,10 @@ class HealthResponse(BaseModel):
     classifier_trained: bool
     using_synthetic_data: bool
     llm_enabled: bool
+    telegram_enabled: bool = True
+    game_api_connected: bool = False
+    grand_mobile_api_enabled: bool = False
+    ocr_available: bool = True
 
 
 # ---- Admin Request Schemas ----
@@ -152,6 +174,7 @@ class AdminRequestCreate(BaseModel):
     """Player explicitly requests a live admin."""
     ticket_id: Optional[str] = None
     player_nickname: Optional[str] = None
+    player_id: Optional[int] = None
     server: Optional[Union[int, str]] = None
     language: str = "ru"
     context_messages: List[Dict[str, Any]] = Field(default_factory=list)
@@ -181,11 +204,38 @@ class FeedbackSubmit(BaseModel):
     correct_priority: Optional[str] = None
     ai_rule_ids: List[str] = Field(default_factory=list)
     correct_rule_ids: Optional[List[str]] = None
+    ticket_text: Optional[str] = None
+    apply_to_model: bool = Field(default=True, description="Update classifier weights when correction is submitted")
     note: Optional[str] = None
 
 
 # ---- Player History Schema ----
 
 class PlayerHistoryQuery(BaseModel):
-    nickname: str
+    nickname: Optional[str] = None
+    player_id: Optional[int] = None
     include_demo: bool = True
+
+
+# ---- Evidence Analyze Schema ----
+
+class EvidenceAnalyzeRequest(BaseModel):
+    ticket_id: Optional[str] = None
+    complaint_text: str = ""
+    category: str = "insult_toxicity"
+    offender_nickname: Optional[str] = None
+    reporter_nickname: Optional[str] = None
+    offender_id: Optional[int] = None
+    server: Optional[int] = None
+    files: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="List of file items: {filename, base64_data, ocr_text, metadata}"
+    )
+
+
+# ---- Telegram Callback Schema ----
+
+class TelegramCallbackRequest(BaseModel):
+    callback_data: str = Field(..., description="e.g. accept_ticket:tkt_0001 or accept_ar:ar_1234")
+    admin_id: Optional[str] = None
+    admin_name: Optional[str] = None
