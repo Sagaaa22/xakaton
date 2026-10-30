@@ -16,6 +16,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -118,7 +119,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 if request.url.path == "/triage"
                 else "Некорректные данные запроса."
             ),
-            "details": exc.errors(),
+            "details": jsonable_encoder(exc.errors()),
         },
     )
 
