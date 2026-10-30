@@ -587,8 +587,8 @@ def create_router(store: WorkspaceStore) -> APIRouter:
     async def meta(user=Depends(get_current_user)):
         tax = store.svc.taxonomy
         subcats = [
-            {"id": sc["id"], "name": sc["name"], "parent": sc["parent"]}
-            for sc in SUBCATEGORY_SPECS
+            {"id": sc_id, "name": sc["name"], "parent": sc["parent"]}
+            for sc_id, sc in SUBCATEGORY_SPECS.items()
         ]
         return {
             "categories": [{"id": c.id, "name": c.name} for c in tax.categories.values()],

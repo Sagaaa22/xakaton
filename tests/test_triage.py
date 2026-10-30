@@ -907,6 +907,20 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         self.assertEqual(st_fbl, 200)
         self.assertGreaterEqual(data_fbl["stats"]["total_feedback"], 1)
 
+        # Verify Workspace endpoints (/api/ws/meta, /api/ws/tickets, /api/ws/analytics)
+        ws_headers = {"x-demo-user": "senior_1"}
+        st_wsm, data_wsm, _ = call_asgi(app, "GET", "/api/ws/meta", headers=ws_headers)
+        self.assertEqual(st_wsm, 200)
+        self.assertGreater(len(data_wsm["subcategories"]), 5)
+
+        st_wst, data_wst, _ = call_asgi(app, "GET", "/api/ws/tickets?scope=all", headers=ws_headers)
+        self.assertEqual(st_wst, 200)
+        self.assertGreater(data_wst["count"], 0)
+
+        st_wsa, data_wsa, _ = call_asgi(app, "GET", "/api/ws/analytics", headers=ws_headers)
+        self.assertEqual(st_wsa, 200)
+        self.assertIn("ai_effectiveness", data_wsa)
+
 
 if __name__ == "__main__":
     unittest.main()
