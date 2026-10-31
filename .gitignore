@@ -13,6 +13,11 @@ pred.jsonl
 data/workspace_state.json
 data/workspace_state.tmp
 data/feedback_store.json
+data/admin_requests.json
+data/fraud_store.json
+data/player_history.json
+data/telegram_outbox.json
+data/*.tmp
 
 # Python bytecode & virtual environments
 __pycache__/

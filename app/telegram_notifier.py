@@ -16,9 +16,13 @@ Features:
 6. Real Telegram Bot API integration via `httpx` when `TELEGRAM_BOT_TOKEN` is set in `.env`,
    with automatic local outbox persistence so notifications & button callbacks work seamlessly
    both with a live Telegram bot and in local/demo environments.
+7. Connection testing & diagnostics (`test_connection`, `send_test_message`).
 """
 from datetime import datetime, timedelta, timezone
+import json
 import logging
+import os
+from pathlib import Path
 import threading
 from typing import Any, Callable, Dict, List, Optional
 import uuid
@@ -57,11 +61,12 @@ SENIOR_REQUIRED_CATEGORIES = {
 class TelegramAdminNotifier:
     """
     Manages Telegram notifications, admin workload distribution, inline button callbacks,
-    and overdue ticket reminders.
+    and overdue ticket reminders with persistent local storage.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, persist_path: Optional[Path] = None) -> None:
         self._lock = threading.RLock()
+        self.persist_path: Path = persist_path or (settings.root_dir / "data" / "telegram_outbox.json")
         self._notifications: List[Dict[str, Any]] = []
         self._ticket_notifications: Dict[str, str] = {}  # ticket_id -> notification_id
         self._ar_notifications: Dict[str, str] = {}      # admin_request_id -> notification_id
@@ -114,9 +119,49 @@ class TelegramAdminNotifier:
                 ],
             },
         }
-        self._rr_index = 0
         self._on_ticket_accepted_cb: Optional[Callable[[str, str, str], Any]] = None
         self._on_ar_accepted_cb: Optional[Callable[[str, str, str], Any]] = None
+        self._load()
+
+    def _load(self) -> None:
+        if not self.persist_path or not self.persist_path.exists():
+            return
+        try:
+            raw = json.loads(self.persist_path.read_text(encoding="utf-8"))
+            if isinstance(raw, list):
+                self._notifications = raw
+                for n in self._notifications:
+                    ref_id = n.get("ref_id")
+                    kind = n.get("kind")
+                    nid = n.get("id")
+                    if kind == "ticket_escalation" and ref_id:
+                        self._ticket_notifications[ref_id] = nid
+                    elif kind == "direct_admin_call" and ref_id:
+                        self._ar_notifications[ref_id] = nid
+        except Exception as exc:
+            logger.warning("Could not load telegram outbox: %s", exc)
+
+    def _save(self) -> None:
+        if not self.persist_path:
+            return
+        try:
+            self.persist_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.persist_path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._notifications[-300:], ensure_ascii=False, indent=2), encoding="utf-8")
+            os.replace(tmp, self.persist_path)
+        except Exception as exc:
+            logger.warning("Could not persist telegram outbox: %s", exc)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._notifications = []
+            self._ticket_notifications = {}
+            self._ar_notifications = {}
+            for adm in self._admins.values():
+                adm["assigned_count"] = 0
+                adm["accepted_count"] = 0
+                adm["active_tickets"] = []
+            self._save()
 
     def register_callbacks(
         self,
@@ -147,10 +192,111 @@ class TelegramAdminNotifier:
                         n["accepted_at"] = _now_iso()
                         n["updated_at"] = _now_iso()
             self._record_admin_acceptance(admin_id, ticket_id)
+            self._save()
 
     @property
     def is_live_bot_configured(self) -> bool:
         return bool(settings.telegram_enabled and settings.telegram_bot_token and settings.telegram_chat_id)
+
+    def test_connection(self) -> Dict[str, Any]:
+        """
+        Verify connection to Telegram Bot API by calling getMe.
+        Does not simulate or return false positive; performs real HTTP query if token is configured.
+        """
+        if not settings.telegram_bot_token:
+            return {
+                "ok": False,
+                "configured": False,
+                "bot_username": None,
+                "bot_id": None,
+                "chat_id": settings.telegram_chat_id or None,
+                "message": "TELEGRAM_BOT_TOKEN не задан в .env. Сервис работает в локальном режиме outbox.",
+            }
+
+        url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/getMe"
+        try:
+            with httpx.Client(timeout=4.5) as client:
+                resp = client.get(url)
+                resp.raise_for_status()
+                data = resp.json()
+                if data.get("ok"):
+                    res = data.get("result", {})
+                    return {
+                        "ok": True,
+                        "configured": True,
+                        "bot_id": res.get("id"),
+                        "bot_name": res.get("first_name"),
+                        "bot_username": f"@{res.get('username')}" if res.get("username") else None,
+                        "can_join_groups": res.get("can_join_groups", True),
+                        "chat_id": settings.telegram_chat_id or "Не указан",
+                        "message": f"Telegram Bot @{res.get('username')} успешно подключен!",
+                    }
+                return {
+                    "ok": False,
+                    "configured": True,
+                    "error": data.get("description", "Unknown error"),
+                    "message": f"Ошибка Telegram Bot API: {data.get('description')}",
+                }
+        except Exception as exc:
+            logger.warning("Telegram Bot getMe failed: %s", exc)
+            return {
+                "ok": False,
+                "configured": True,
+                "error": str(exc),
+                "message": f"Не удалось связаться с Telegram Bot API: {exc}",
+            }
+
+    def send_test_message(self, text: Optional[str] = None) -> Dict[str, Any]:
+        """Send a real test notification to verify delivery in Telegram chat."""
+        if not settings.telegram_bot_token:
+            return {
+                "ok": False,
+                "delivered": False,
+                "message": "TELEGRAM_BOT_TOKEN не настроен в .env",
+            }
+        target_chat = settings.telegram_chat_id
+        if not target_chat:
+            return {
+                "ok": False,
+                "delivered": False,
+                "message": "TELEGRAM_CHAT_ID не настроен в .env",
+            }
+
+        msg = text or (
+            "🔔 <b>Grand Mobile Support Copilot</b>\n"
+            "Тестовое уведомление: связь с Telegram Bot API успешно установлена!\n"
+            f"Время: {_now_iso()}"
+        )
+        url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+        payload = {
+            "chat_id": target_chat,
+            "text": msg,
+            "parse_mode": "HTML",
+        }
+        try:
+            with httpx.Client(timeout=4.5) as client:
+                resp = client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                if data.get("ok"):
+                    return {
+                        "ok": True,
+                        "delivered": True,
+                        "message_id": data.get("result", {}).get("message_id"),
+                        "chat_id": target_chat,
+                        "message": "Тестовое сообщение успешно доставлено в Telegram!",
+                    }
+                return {
+                    "ok": False,
+                    "delivered": False,
+                    "error": data.get("description"),
+                }
+        except Exception as exc:
+            return {
+                "ok": False,
+                "delivered": False,
+                "error": str(exc),
+            }
 
     # ---------------- Admin Load Balancing & Distribution ----------------
 
@@ -184,7 +330,6 @@ class TelegramAdminNotifier:
             # For standard tickets or direct calls: pick least-loaded admin (preferring juniors first)
             juniors = [a for a in online_admins if a["role"] == "junior_admin"]
             candidates = juniors if juniors else online_admins
-            # Sort by active ticket count, then total assigned count, then round-robin tie-breaker
             chosen = min(
                 candidates,
                 key=lambda a: (len(a["active_tickets"]), a["assigned_count"]),
@@ -524,6 +669,7 @@ class TelegramAdminNotifier:
                 self._ticket_notifications[ticket_id] = notif_id
             elif kind == "direct_admin_call":
                 self._ar_notifications[ref_id] = notif_id
+            self._save()
 
         logger.info(
             "telegram_notification_sent id=%s kind=%s ref=%s admin=%s mode=%s",
@@ -574,6 +720,7 @@ class TelegramAdminNotifier:
                 notif["updated_at"] = _now_iso()
 
             self._record_admin_acceptance(resolved_admin_id, target_id)
+            self._save()
 
         # Trigger hooks into WorkspaceStore / AdminRequestStore
         hook_result = None
@@ -683,6 +830,9 @@ class TelegramAdminNotifier:
             reminders.append(rem_entry)
             logger.info("telegram_reminder_sent ref=%s count=%d", n["ref_id"], rem_num)
 
+        with self._lock:
+            self._save()
+
         return reminders
 
     # ---------------- Queries & Dashboard Stats ----------------
@@ -728,6 +878,9 @@ class TelegramAdminNotifier:
             "enabled": settings.telegram_enabled,
             "live_bot_configured": self.is_live_bot_configured,
             "delivery_mode": "telegram_bot_api" if self.is_live_bot_configured else "local_outbox_simulation",
+            "bot_token_configured": bool(settings.telegram_bot_token),
+            "chat_id_configured": bool(settings.telegram_chat_id),
+            "chat_id": settings.telegram_chat_id or None,
             "reminder_minutes_threshold": settings.telegram_reminder_minutes,
             "dashboard_base_url": settings.dashboard_base_url,
             "total_notifications": total,
@@ -738,9 +891,9 @@ class TelegramAdminNotifier:
             "total_reminders_sent": reminders_total,
             "admins": self.get_admins_status(),
             "config_hint": (
-                "Telegram Bot API активен."
+                "Telegram Bot API активен (TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID настроены в .env)."
                 if self.is_live_bot_configured
-                else "Уведомления работают в локальном режиме (доступны в панели и API). Для отправки в реальный Telegram укажите TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в .env."
+                else "Уведомления сохраняются в локальный outbox. Для отправки в реальный Telegram укажите TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в .env."
             ),
         }
 

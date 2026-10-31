@@ -12,9 +12,13 @@ Features:
     queries live game server database via HTTP.
   - Otherwise, honestly reports offline/local mode (`game_api_connected: false`) and uses
     session records + clearly marked DEMO profiles.
+- Persistent JSON storage in `data/player_history.json`.
 """
 from datetime import datetime, timezone
+import json
 import logging
+import os
+from pathlib import Path
 import re
 import threading
 from typing import Any, Dict, List, Optional, Union
@@ -227,15 +231,16 @@ class GrandMobileAPIConnector:
 
 class PlayerHistoryStore:
     """
-    In-memory + pluggable Game API player history storage.
+    In-memory + pluggable Game API player history storage with disk persistence.
     Supports lookup by nickname OR in-game player_id.
     Strictly separates confirmed violations from unconfirmed complaints.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, persist_path: Optional[Path] = None) -> None:
         self._reported_players: Dict[str, Dict[str, Any]] = {}  # key: lower nickname
         self._id_to_nick: Dict[int, str] = {}                   # player_id -> lower nickname
         self._lock = threading.RLock()
+        self.persist_path: Path = persist_path or (settings.root_dir / "data" / "player_history.json")
         self.game_api = GrandMobileAPIConnector()
 
         # Pre-index demo player IDs
@@ -243,6 +248,43 @@ class PlayerHistoryStore:
             pid = data.get("player_id")
             if isinstance(pid, int):
                 self._id_to_nick[pid] = nick.lower()
+
+        self._load()
+
+    def _load(self) -> None:
+        if not self.persist_path or not self.persist_path.exists():
+            return
+        try:
+            raw = json.loads(self.persist_path.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                self._reported_players = raw
+                for k, v in self._reported_players.items():
+                    pid = v.get("player_id")
+                    if isinstance(pid, int):
+                        self._id_to_nick[pid] = k.lower()
+        except Exception as exc:
+            logger.warning("Could not load player history: %s", exc)
+
+    def _save(self) -> None:
+        if not self.persist_path:
+            return
+        try:
+            self.persist_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.persist_path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._reported_players, ensure_ascii=False, indent=2), encoding="utf-8")
+            os.replace(tmp, self.persist_path)
+        except Exception as exc:
+            logger.warning("Could not persist player history: %s", exc)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._reported_players = {}
+            self._id_to_nick = {}
+            for nick, data in _DEMO_HISTORY.items():
+                pid = data.get("player_id")
+                if isinstance(pid, int):
+                    self._id_to_nick[pid] = nick.lower()
+            self._save()
 
     def record_complaint_against(
         self,
@@ -331,6 +373,7 @@ class PlayerHistoryStore:
                             "admin": admin_name or "Администратор",
                             "confirmed": True,
                         })
+                    self._save()
                 return
 
             status_str = "confirmed" if confirmed else "pending_review"
@@ -354,6 +397,7 @@ class PlayerHistoryStore:
                         "admin": admin_name or "Администратор",
                         "confirmed": True,
                     })
+            self._save()
 
     def get_player_history(
         self,

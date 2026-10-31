@@ -1,16 +1,21 @@
 """
 Admin Request (direct call) tracking module for Grand Mobile Support Copilot.
-Handles player requests for a live human admin.
+Handles player requests for a live human admin with persistent storage.
 Tracks statuses: WAITING -> ACCEPTED -> IN_PROGRESS -> COMPLETED | CANCELLED.
 
 IMPORTANT: Players always have the right to request a live admin,
 regardless of AI confidence or classification.
 """
-import logging
-import threading
-import uuid
 from datetime import datetime, timezone
+import json
+import logging
+import os
+from pathlib import Path
+import threading
 from typing import Any, Dict, List, Optional
+import uuid
+
+from app.config import settings
 
 logger = logging.getLogger("grand_mobile_copilot.admin_requests")
 
@@ -36,11 +41,41 @@ STATUS_LABELS = {
 
 
 class AdminRequestStore:
-    """Thread-safe store for direct admin call requests."""
+    """Thread-safe store for direct admin call requests with disk persistence."""
 
-    def __init__(self) -> None:
+    def __init__(self, persist_path: Optional[Path] = None) -> None:
         self._requests: Dict[str, Dict[str, Any]] = {}
         self._lock = threading.RLock()
+        self.persist_path: Path = persist_path or (settings.root_dir / "data" / "admin_requests.json")
+        self._load()
+
+    def _load(self) -> None:
+        if not self.persist_path or not self.persist_path.exists():
+            return
+        try:
+            raw = json.loads(self.persist_path.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                self._requests = raw
+            elif isinstance(raw, list):
+                self._requests = {r["id"]: r for r in raw if isinstance(r, dict) and "id" in r}
+        except Exception as exc:
+            logger.warning("Could not load admin requests: %s", exc)
+
+    def _save(self) -> None:
+        if not self.persist_path:
+            return
+        try:
+            self.persist_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.persist_path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._requests, ensure_ascii=False, indent=2), encoding="utf-8")
+            os.replace(tmp, self.persist_path)
+        except Exception as exc:
+            logger.warning("Could not persist admin requests: %s", exc)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._requests = {}
+            self._save()
 
     def create(
         self,
@@ -52,7 +87,7 @@ class AdminRequestStore:
     ) -> Dict[str, Any]:
         """Create a new admin request from a player."""
         request_id = f"ar_{uuid.uuid4().hex[:8]}"
-        
+
         # Build context summary from messages
         context_texts = [
             m.get("text", "")
@@ -61,7 +96,7 @@ class AdminRequestStore:
             and m.get("text")
         ]
         context_summary = "\n".join(context_texts[-3:])[:500]  # Last 3 messages, max 500 chars
-        
+
         request = {
             "id": request_id,
             "ticket_id": ticket_id,
@@ -88,10 +123,11 @@ class AdminRequestStore:
                 }
             ],
         }
-        
+
         with self._lock:
             self._requests[request_id] = request
-        
+            self._save()
+
         logger.info("admin_request_created id=%s player=%s server=%s", request_id, player_nickname, server)
         return dict(request)
 
@@ -108,7 +144,7 @@ class AdminRequestStore:
                 return None
             if req["status"] != STATUS_WAITING:
                 return dict(req)  # Already accepted or finished
-            
+
             req["status"] = STATUS_ACCEPTED
             req["status_label"] = STATUS_LABELS[STATUS_ACCEPTED]
             req["accepted_by"] = admin_id
@@ -120,6 +156,7 @@ class AdminRequestStore:
                 "actor": admin_id,
                 "note": f"Принят администратором {admin_name}",
             })
+            self._save()
             logger.info("admin_request_accepted id=%s admin=%s", request_id, admin_name)
             return dict(req)
 
@@ -129,7 +166,7 @@ class AdminRequestStore:
             req = self._requests.get(request_id)
             if not req:
                 return None
-            
+
             req["status"] = STATUS_IN_PROGRESS
             req["status_label"] = STATUS_LABELS[STATUS_IN_PROGRESS]
             req["updated_at"] = _now()
@@ -139,6 +176,7 @@ class AdminRequestStore:
                 "actor": admin_id,
                 "note": f"Администратор {admin_name} подключился к обращению",
             })
+            self._save()
             return dict(req)
 
     def complete(self, request_id: str, admin_id: str, admin_name: str, note: Optional[str] = None) -> Optional[Dict[str, Any]]:
@@ -147,7 +185,7 @@ class AdminRequestStore:
             req = self._requests.get(request_id)
             if not req:
                 return None
-            
+
             req["status"] = STATUS_COMPLETED
             req["status_label"] = STATUS_LABELS[STATUS_COMPLETED]
             req["completed_at"] = _now()
@@ -160,6 +198,7 @@ class AdminRequestStore:
                 "actor": admin_id,
                 "note": note or f"Обращение завершено администратором {admin_name}",
             })
+            self._save()
             logger.info("admin_request_completed id=%s admin=%s", request_id, admin_name)
             return dict(req)
 
@@ -171,7 +210,7 @@ class AdminRequestStore:
                 return None
             if req["status"] in (STATUS_COMPLETED, STATUS_CANCELLED):
                 return dict(req)
-            
+
             req["status"] = STATUS_CANCELLED
             req["status_label"] = STATUS_LABELS[STATUS_CANCELLED]
             req["cancelled_at"] = _now()
@@ -182,6 +221,7 @@ class AdminRequestStore:
                 "actor": requester,
                 "note": "Отменён" + (" игроком" if requester == "player" else f" администратором {requester}"),
             })
+            self._save()
             return dict(req)
 
     def list_requests(
@@ -192,10 +232,10 @@ class AdminRequestStore:
         """List all admin requests, optionally filtered by status."""
         with self._lock:
             items = list(self._requests.values())
-        
+
         if status:
             items = [r for r in items if r["status"] == status]
-        
+
         items.sort(key=lambda x: x["created_at"], reverse=True)
         return [dict(r) for r in items[:limit]]
 
@@ -212,7 +252,7 @@ class AdminRequestStore:
             for req in self._requests.values():
                 s = req["status"]
                 by_status[s] = by_status.get(s, 0) + 1
-        
+
         return {
             "total": total,
             "waiting": by_status.get(STATUS_WAITING, 0),

@@ -6,198 +6,329 @@
 <title>Grand Mobile Support Copilot — Админ-панель</title>
 <style>
 :root{
-  --bg:#0b0f17;--surface:#111827;--card:#172033;--card2:#1d2840;--hover:#22304d;--border:#2a364f;
-  --text:#f1f5f9;--text2:#a5b0c2;--muted:#748098;--accent:#6366f1;--accent2:#4f46e5;
-  --ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--crit:#ec4899;--info:#3b82f6;
-  --radius:10px;--focus:0 0 0 3px rgba(99,102,241,.55);
+  /* Modern High-Contrast SaaS Palette (Grand Mobile Ops Dark) */
+  --bg:#090d16;
+  --bg-subtle:#0d1424;
+  --surface:#101728;
+  --surface-hover:#162035;
+  --card:#151d30;
+  --card2:#1b253d;
+  --card-hover:#1f2b45;
+  --hover:#202c46;
+  --border:#26344e;
+  --border-subtle:#1b263b;
+  --border-focus:#6366f1;
+
+  /* Typography */
+  --text:#f8fafc;
+  --text2:#cbd5e1;
+  --muted:#8e9db3;
+  --muted-light:#a4b3c9;
+
+  /* Accents */
+  --accent:#6366f1;
+  --accent-hover:#4f46e5;
+  --accent-soft:rgba(99,102,241,0.15);
+  --accent-gradient:linear-gradient(135deg,#6366f1,#8b5cf6);
+
+  /* Status Colors */
+  --ok:#10b981;
+  --ok-bg:rgba(16,185,129,0.12);
+  --ok-border:rgba(16,185,129,0.38);
+
+  --warn:#f59e0b;
+  --warn-bg:rgba(245,158,11,0.12);
+  --warn-border:rgba(245,158,11,0.38);
+
+  --bad:#ef4444;
+  --bad-bg:rgba(239,68,68,0.12);
+  --bad-border:rgba(239,68,68,0.42);
+
+  --crit:#ec4899;
+  --crit-bg:rgba(236,72,153,0.15);
+  --crit-border:rgba(236,72,153,0.45);
+
+  --info:#0ea5e9;
+  --info-bg:rgba(14,165,233,0.12);
+  --info-border:rgba(14,165,233,0.38);
+
+  /* Dimensions & Shadows */
+  --radius-sm:6px;
+  --radius:10px;
+  --radius-lg:14px;
+  --focus:0 0 0 3px rgba(99,102,241,0.35);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.25);
+  --shadow:0 4px 14px rgba(0,0,0,0.35);
+  --shadow-lg:0 16px 36px rgba(0,0,0,0.55);
 }
+
 *{box-sizing:border-box;margin:0;padding:0}
-html{font-size:15px}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
-a{color:#a5b4fc;text-decoration:none}
+html{font-size:14.5px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Inter",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.55;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+a{color:#a5b4fc;text-decoration:none;transition:color .15s}
+a:hover{color:#c7d2fe;text-decoration:underline}
 button,input,select,textarea{font:inherit;color:inherit}
-:focus-visible{outline:none;box-shadow:var(--focus);border-radius:6px}
+:focus-visible{outline:none;box-shadow:var(--focus);border-radius:var(--radius-sm)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
-/* Layout */
-.app{display:grid;grid-template-columns:255px 1fr;grid-template-rows:auto auto 1fr;min-height:100vh}
-.topbar{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
-.demo-strip{grid-column:1/3;background:rgba(245,158,11,.12);border-bottom:1px solid rgba(245,158,11,.35);color:#fcd34d;font-size:.82rem;padding:5px 20px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700}
-.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:grid;place-items:center;font-weight:800;color:#fff}
-.brand small{display:block;font-weight:400;color:var(--text2);font-size:.75rem}
+/* Layout Grid */
+.app{display:grid;grid-template-columns:255px 1fr;grid-template-rows:auto auto 1fr;min-height:100vh;position:relative}
+.topbar{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:10px 22px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:40;box-shadow:var(--shadow-sm)}
+.demo-strip{grid-column:1/3;background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.3);color:#fcd34d;font-size:0.83rem;padding:6px 22px;display:flex;align-items:center;gap:8px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:700}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent-gradient);display:grid;place-items:center;font-weight:800;color:#fff;box-shadow:0 2px 8px rgba(99,102,241,0.4)}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:0.75rem;margin-top:1px}
 .topbar .spacer{flex:1}
-.userbox{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text2)}
-.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:12px 10px;display:flex;flex-direction:column;gap:2px}
-.nav-link{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;color:var(--text2);font-size:.88rem}
-.nav-link:hover{background:var(--card);color:var(--text)}
-.nav-link.active{background:rgba(99,102,241,.16);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
-.nav-link .count{margin-left:auto;background:var(--card2);border-radius:999px;padding:0 8px;font-size:.73rem;color:var(--text)}
-.nav-link .count.hot{background:rgba(239,68,68,.25);color:#fecaca}
-.nav-link .lock{margin-left:auto;font-size:.72rem;color:var(--muted)}
-.nav-sep{height:1px;background:var(--border);margin:6px 4px}
-.main{padding:18px 22px;min-width:0;overflow:auto}
-.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-.page-head h1{font-size:1.35rem}
-.page-head p{color:var(--text2);font-size:.88rem}
-svg.i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.userbox{display:flex;align-items:center;gap:10px;font-size:0.85rem;color:var(--text2)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);color:var(--text2);font-size:0.88rem;font-weight:500;transition:all .15s ease}
+.nav-link:hover{background:var(--card);color:var(--text);transform:translateX(2px)}
+.nav-link.active{background:var(--accent-soft);color:#ffffff;box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
+.nav-link .count{margin-left:auto;background:var(--card2);border-radius:999px;padding:1px 8px;font-size:0.72rem;color:var(--text2);font-weight:600}
+.nav-link .count.hot{background:rgba(239,68,68,0.22);color:#fca5a5}
+.nav-link .lock{margin-left:auto;font-size:0.72rem;color:var(--muted)}
+.nav-sep{height:1px;background:var(--border-subtle);margin:8px 6px}
+.main{padding:22px 26px;min-width:0;overflow:auto}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.page-head h1{font-size:1.45rem;font-weight:700;letter-spacing:-0.015em;color:var(--text)}
+.page-head p{color:var(--text2);font-size:0.89rem;max-width:80ch;margin-top:3px}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* Controls */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:.85rem;font-weight:600;cursor:pointer;white-space:nowrap}
-.btn:hover:not(:disabled){background:var(--hover)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover:not(:disabled){background:var(--accent2)}
-.btn.ok{background:rgba(16,185,129,.18);border-color:rgba(16,185,129,.5);color:#6ee7b7}
-.btn.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.5);color:#fca5a5}
-.btn.warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.45);color:#fcd34d}
-.btn.sm{padding:4px 9px;font-size:.78rem}
-.input,.select,.textarea{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.86rem;min-width:0}
-.textarea{width:100%;resize:vertical;line-height:1.5}
-.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
-.filters .input{flex:1 1 200px}
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:36px;padding:0 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--card);color:var(--text);
+  font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap;
+  transition:background-color .15s ease,border-color .15s ease,transform .1s ease,box-shadow .15s ease;
+  user-select:none;text-decoration:none;
+}
+.btn:hover:not(:disabled){background:var(--hover);border-color:#384968;transform:translateY(-1px);color:var(--text);text-decoration:none}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:disabled{opacity:0.45;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,0.32)}
+.btn.primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);box-shadow:0 4px 14px rgba(99,102,241,0.48)}
+.btn.ok{background:var(--ok-bg);border-color:var(--ok-border);color:#6ee7b7}
+.btn.ok:hover:not(:disabled){background:rgba(16,185,129,0.22);border-color:rgba(16,185,129,0.5)}
+.btn.danger{background:var(--bad-bg);border-color:var(--bad-border);color:#fca5a5}
+.btn.danger:hover:not(:disabled){background:rgba(239,68,68,0.22);border-color:rgba(239,68,68,0.55)}
+.btn.warn{background:var(--warn-bg);border-color:var(--warn-border);color:#fcd34d}
+.btn.warn:hover:not(:disabled){background:rgba(245,158,11,0.22);border-color:rgba(245,158,11,0.5)}
+.btn.sm{height:28px;padding:0 10px;font-size:0.78rem;border-radius:6px;gap:5px}
+
+/* Form Controls */
+.input,.select,.textarea{
+  background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:7px 11px;font-size:0.86rem;color:var(--text);min-width:0;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.input:hover,.select:hover,.textarea:hover{border-color:#384968}
+.input:focus,.select:focus,.textarea:focus{border-color:var(--accent);outline:none;box-shadow:var(--focus)}
+.textarea{width:100%;resize:vertical;line-height:1.55}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.filters .input{flex:1 1 210px}
 
 /* Badges */
-.b{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:6px;font-size:.75rem;font-weight:600;border:1px solid transparent;white-space:nowrap}
-.p-critical{background:rgba(236,72,153,.18);color:#f9a8d4;border-color:rgba(236,72,153,.45)}
-.p-high{background:rgba(239,68,68,.18);color:#fca5a5;border-color:rgba(239,68,68,.45)}
-.p-medium{background:rgba(245,158,11,.16);color:#fcd34d;border-color:rgba(245,158,11,.4)}
-.p-low{background:rgba(16,185,129,.15);color:#6ee7b7;border-color:rgba(16,185,129,.4)}
-.s-new{background:rgba(59,130,246,.18);color:#93c5fd}
-.s-in_progress{background:rgba(99,102,241,.2);color:#c7d2fe}
-.s-awaiting_player{background:rgba(148,163,184,.18);color:#cbd5e1}
-.s-escalated{background:rgba(239,68,68,.2);color:#fecaca}
-.s-returned{background:rgba(245,158,11,.2);color:#fde68a}
-.s-resolved{background:rgba(16,185,129,.18);color:#a7f3d0}
-.s-closed{background:rgba(100,116,139,.25);color:#cbd5e1}
-.b-lang{background:rgba(59,130,246,.14);color:#93c5fd;text-transform:uppercase}
-.b-cat{background:rgba(139,92,246,.15);color:#ddd6fe}
-.b-subcat{background:rgba(56,189,248,.14);color:#bae6fd;border-color:rgba(56,189,248,.35)}
-.b-human{background:rgba(239,68,68,.18);color:#fecaca;border-color:rgba(239,68,68,.45)}
-.b-auto{background:rgba(16,185,129,.15);color:#a7f3d0;border-color:rgba(16,185,129,.35)}
-.b-muted{background:var(--card2);color:var(--text2)}
+.b{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;border:1px solid transparent;white-space:nowrap;line-height:1.35}
+.p-critical{background:var(--crit-bg);color:#f9a8d4;border-color:var(--crit-border)}
+.p-high{background:var(--bad-bg);color:#fca5a5;border-color:var(--bad-border)}
+.p-medium{background:var(--warn-bg);color:#fcd34d;border-color:var(--warn-border)}
+.p-low{background:var(--ok-bg);color:#6ee7b7;border-color:var(--ok-border)}
+.s-new{background:rgba(59,130,246,0.18);color:#93c5fd;border-color:rgba(59,130,246,0.4)}
+.s-in_progress{background:rgba(99,102,241,0.2);color:#c7d2fe;border-color:rgba(99,102,241,0.4)}
+.s-awaiting_player{background:rgba(148,163,184,0.18);color:#cbd5e1;border-color:rgba(148,163,184,0.35)}
+.s-escalated{background:rgba(239,68,68,0.2);color:#fecaca;border-color:rgba(239,68,68,0.4)}
+.s-returned{background:rgba(245,158,11,0.2);color:#fde68a;border-color:rgba(245,158,11,0.4)}
+.s-resolved{background:rgba(16,185,129,0.18);color:#a7f3d0;border-color:rgba(16,185,129,0.4)}
+.s-closed{background:rgba(100,116,139,0.25);color:#cbd5e1;border-color:rgba(100,116,139,0.4)}
+.b-lang{background:rgba(59,130,246,0.14);color:#93c5fd;text-transform:uppercase;border-color:rgba(59,130,246,0.3)}
+.b-cat{background:rgba(139,92,246,0.16);color:#ddd6fe;border-color:rgba(139,92,246,0.35)}
+.b-subcat{background:rgba(56,189,248,0.15);color:#bae6fd;border-color:rgba(56,189,248,0.35)}
+.b-human{background:var(--bad-bg);color:#fecaca;border-color:var(--bad-border)}
+.b-auto{background:var(--ok-bg);color:#a7f3d0;border-color:var(--ok-border)}
+.b-muted{background:var(--card2);color:var(--text2);border-color:var(--border)}
 
-/* Cards & grids */
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
-.card h2,.card h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;cursor:default}
+/* Cards & Surfaces */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm)}
+.card h2,.card h3{font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;cursor:default;transition:border-color .15s ease}
+.stat:hover{border-color:#384968}
 .stat a{display:block;color:inherit}
-.stat .v{font-size:1.55rem;font-weight:700}
-.stat .l{color:var(--text2);font-size:.78rem}
-.stat.hot{border-color:rgba(239,68,68,.5)}
-.stat.ok{border-color:rgba(16,185,129,.45)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.stack{display:flex;flex-direction:column;gap:12px}
-.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px}
-.kv div{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
-.kv span{display:block;font-size:.72rem;color:var(--muted)}
-.kv b{font-size:.86rem;font-weight:600;word-break:break-word}
-.muted{color:var(--text2)}
-.small{font-size:.8rem}
+.stat .v{font-size:1.65rem;font-weight:700;color:var(--text);line-height:1.2}
+.stat .l{color:var(--text2);font-size:0.79rem;margin-top:4px}
+.stat.hot{border-color:rgba(239,68,68,0.45);background:linear-gradient(180deg,rgba(239,68,68,0.06),transparent)}
+.stat.ok{border-color:rgba(16,185,129,0.4);background:linear-gradient(180deg,rgba(16,185,129,0.05),transparent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px}
+.kv div{background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px}
+.kv span{display:block;font-size:0.73rem;color:var(--muted);margin-bottom:2px}
+.kv b{font-size:0.87rem;font-weight:600;word-break:break-word;color:var(--text)}
+.muted{color:var(--muted)}
+.small{font-size:0.82rem}
 
-/* Confidence bar */
-.conf-wrap{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
-.conf-track{height:8px;background:var(--card2);border-radius:999px;overflow:hidden;margin-top:5px}
-.conf-fill{height:100%;border-radius:999px;transition:width .3s}
+/* Confidence Bar */
+.conf-wrap{background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px}
+.conf-track{height:8px;background:var(--card2);border-radius:999px;overflow:hidden;margin-top:6px}
+.conf-fill{height:100%;border-radius:999px;transition:width .35s ease}
 
-/* Split view */
-.split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(390px,1fr);gap:14px;align-items:start}
-.detail{position:sticky;top:0;max-height:calc(100vh - 150px);overflow:auto}
+/* Split View */
+.split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(400px,1fr);gap:16px;align-items:start}
+.detail{position:sticky;top:70px;max-height:calc(100vh - 90px);overflow-y:auto;padding-right:2px}
 
-/* Table */
-.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:auto}
-table{width:100%;border-collapse:collapse;font-size:.84rem}
-caption{text-align:left;padding:10px 12px;color:var(--text2);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
-th{position:sticky;top:0;background:var(--card2);text-align:left;font-weight:600;color:var(--text2);padding:0;border-bottom:1px solid var(--border);white-space:nowrap}
-th button{background:none;border:0;padding:9px 10px;width:100%;text-align:left;cursor:pointer;color:inherit;font-weight:600}
-th span.th{display:block;padding:9px 10px}
-td{padding:8px 10px;border-bottom:1px solid rgba(42,54,79,.6);vertical-align:top}
-tbody tr{cursor:pointer}
+/* Tables */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:0.85rem}
+caption{text-align:left;padding:11px 14px;color:var(--text2);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
+th{position:sticky;top:0;background:var(--card2);text-align:left;font-weight:600;color:var(--text2);padding:0;border-bottom:1px solid var(--border);white-space:nowrap;z-index:2}
+th button{background:none;border:0;padding:10px 12px;width:100%;text-align:left;cursor:pointer;color:inherit;font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;justify-content:space-between}
+th button:hover{background:var(--hover);color:var(--text)}
+th span.th{display:block;padding:10px 12px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em}
+td{padding:9px 12px;border-bottom:1px solid rgba(38,52,78,0.6);vertical-align:top}
+tbody tr{cursor:pointer;transition:background-color .12s ease}
 tbody tr:hover{background:var(--hover)}
-tbody tr.sel{background:rgba(99,102,241,.14);box-shadow:inset 3px 0 0 var(--accent)}
-td.id{font-family:monospace;color:#c7d2fe;white-space:nowrap}
-.snip{color:var(--muted);font-size:.78rem;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;max-width:320px}
+tbody tr.sel{background:rgba(99,102,241,0.13);box-shadow:inset 3px 0 0 var(--accent)}
+td.id{font-family:monospace;color:#c7d2fe;white-space:nowrap;font-size:0.83rem}
+.snip{color:var(--muted);font-size:0.78rem;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;max-width:320px;margin-top:2px}
 
-/* Ticket detail */
-.t-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
-.t-head h2{font-size:1.05rem;font-family:monospace;margin-right:6px;text-transform:none;color:var(--text)}
-.banner{border-radius:var(--radius);padding:10px 14px;font-size:.85rem}
-.banner.human{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.45)}
-.banner.auto{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4)}
-.banner.info{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.4)}
-.banner.warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.45)}
-.banner b{display:block;margin-bottom:2px}
-.msg{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px}
+/* Ticket Details */
+.t-head{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:12px}
+.t-head h2{font-size:1.15rem;font-family:monospace;margin-right:6px;text-transform:none;color:var(--text);font-weight:700}
+.banner{border-radius:var(--radius);padding:11px 16px;font-size:0.86rem;line-height:1.5}
+.banner.human{background:var(--bad-bg);border:1px solid var(--bad-border);color:#fee2e2}
+.banner.auto{background:var(--ok-bg);border:1px solid var(--ok-border);color:#d1fae5}
+.banner.info{background:var(--info-bg);border:1px solid var(--info-border);color:#e0f2fe}
+.banner.warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:#fef3c7}
+.banner b{display:block;margin-bottom:3px;font-weight:600}
+.msg{background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px}
 .msg.admin{border-left:3px solid var(--accent)}
-.msg .meta{display:flex;justify-content:space-between;font-size:.74rem;color:var(--muted);margin-bottom:4px}
-.msg .tx{white-space:pre-wrap;font-size:.88rem}
-.rule{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:9px 12px}
-.rule .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
-.rule .rid{background:var(--accent);color:#fff;font-weight:700;font-size:.75rem;padding:1px 8px;border-radius:5px}
-.rule q{display:block;font-style:italic;color:var(--text2);font-size:.82rem;margin:4px 0;quotes:"«" "»"}
-.rule .pun{font-size:.76rem;color:#fcd34d}
-.ver-ok{color:#6ee7b7;font-size:.76rem;font-weight:600}
-.ver-bad{color:#fca5a5;font-size:.76rem;font-weight:600}
+.msg .meta{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-bottom:5px}
+.msg .tx{white-space:pre-wrap;font-size:0.88rem;line-height:1.55}
+.rule{background:var(--bg-subtle);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:10px 13px}
+.rule .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
+.rule .rid{background:var(--accent);color:#fff;font-weight:700;font-size:0.76rem;padding:2px 8px;border-radius:5px}
+.rule q{display:block;font-style:italic;color:var(--text2);font-size:0.84rem;margin:5px 0;quotes:"«" "»"}
+.rule .pun{font-size:0.78rem;color:#fcd34d;font-weight:500}
+.ver-ok{color:#6ee7b7;font-size:0.78rem;font-weight:600}
+.ver-bad{color:#fca5a5;font-size:0.78rem;font-weight:600}
 .actions{display:flex;flex-wrap:wrap;gap:8px}
-.timeline{list-style:none;display:flex;flex-direction:column;gap:6px;font-size:.82rem}
-.timeline li{border-left:2px solid var(--border);padding:2px 0 2px 10px}
-.timeline .when{color:var(--muted);font-size:.74rem}
-details summary{cursor:pointer;color:var(--text2);font-size:.85rem}
-ul.reasons{padding-left:18px;font-size:.82rem;color:var(--text2);display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.timeline{list-style:none;display:flex;flex-direction:column;gap:7px;font-size:0.83rem}
+.timeline li{border-left:2px solid var(--border);padding:3px 0 3px 12px}
+.timeline .when{color:var(--muted);font-size:0.75rem}
+details summary{cursor:pointer;color:var(--text2);font-size:0.86rem;font-weight:500}
+ul.reasons{padding-left:18px;font-size:0.83rem;color:var(--text2);display:flex;flex-direction:column;gap:4px;margin-top:6px}
 
-/* Telegram bubble */
-.tg-msg{background:#182533;border:1px solid #2b5278;border-radius:12px;padding:12px 14px;font-size:.85rem;line-height:1.45}
+/* Telegram Cards */
+.tg-msg{background:#152232;border:1px solid #234568;border-radius:var(--radius);padding:13px 16px;font-size:0.86rem;line-height:1.5;box-shadow:var(--shadow-sm)}
 .tg-msg pre{white-space:pre-wrap;font-family:inherit}
-.tg-kb{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
-.tg-btn{background:#2b5278;border:0;color:#fff;padding:7px 10px;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:5px}
-.tg-btn:hover:not(:disabled){background:#356594}
-.tg-btn:disabled{opacity:.55;cursor:default}
+.tg-kb{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.tg-btn{background:#234568;border:0;color:#fff;padding:8px 12px;border-radius:7px;font-size:0.83rem;font-weight:600;cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background-color .15s}
+.tg-btn:hover:not(:disabled){background:#2e5a88}
+.tg-btn:disabled{opacity:0.5;cursor:default}
 
-/* States */
-.empty{padding:28px;text-align:center;color:var(--text2);font-size:.9rem}
-.err{padding:14px;border-radius:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.45);color:#fecaca;font-size:.88rem}
-.spinner{width:22px;height:22px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+/* Empty State & Error Boxes */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:36px 20px;color:var(--text2)}
+.empty-state .empty-icon{width:46px;height:46px;border-radius:50%;background:var(--card2);display:grid;place-items:center;margin-bottom:12px;color:var(--muted)}
+.empty-state .empty-icon svg{width:24px;height:24px}
+.empty-state h3{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:5px;text-transform:none;letter-spacing:normal}
+.empty-state p{font-size:0.84rem;color:var(--muted);max-width:50ch}
+.empty{padding:28px;text-align:center;color:var(--muted);font-size:0.88rem}
+.err{padding:14px 16px;border-radius:var(--radius-sm);background:var(--bad-bg);border:1px solid var(--bad-border);color:#fee2e2;font-size:0.88rem;display:flex;align-items:center;gap:10px}
+
+/* Spinner & Shimmer Skeletons */
+.spinner{width:20px;height:20px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
-.skel{height:14px;border-radius:6px;background:linear-gradient(90deg,var(--card2),var(--hover),var(--card2));background-size:200% 100%;animation:sk 1.2s infinite;margin:8px 0}
-@keyframes sk{to{background-position:-200% 0}}
+.skel{
+  height:14px;border-radius:6px;
+  background:linear-gradient(90deg,var(--card2) 0%,var(--hover) 50%,var(--card2) 100%);
+  background-size:200% 100%;
+  animation:skShimmer 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  margin:6px 0;
+}
+@keyframes skShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-card{padding:20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
 
-/* Bars */
-.bar-row{display:grid;grid-template-columns:190px 1fr 46px;gap:8px;align-items:center;font-size:.8rem;margin:4px 0}
-.bar-row .tr{height:7px;background:var(--bg);border-radius:999px;overflow:hidden}
+/* Bar Charts */
+.bar-row{display:grid;grid-template-columns:190px 1fr 48px;gap:10px;align-items:center;font-size:0.82rem;margin:5px 0}
+.bar-row .tr{height:8px;background:var(--bg-subtle);border-radius:999px;overflow:hidden}
 .bar-row .fl{height:100%;background:var(--accent)}
 .bar-row .nm{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* Modal & toast */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+/* Modals & Toasts */
+.modal-bg{position:fixed;inset:0;background:rgba(4,7,14,0.78);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:90;padding:16px;animation:fadeIn 0.15s ease-out}
 .modal-bg.open{display:flex}
-.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:600px;max-height:90vh;overflow:auto;padding:20px}
-.modal h3{font-size:1.05rem;margin-bottom:12px}
-.field{margin-bottom:12px}
-.field label{display:block;font-size:.8rem;color:var(--text2);margin-bottom:4px;font-weight:600}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:620px;max-height:90vh;overflow-y:auto;padding:22px 24px;box-shadow:var(--shadow-lg);animation:modalScale 0.2s cubic-bezier(0.16,1,0.3,1)}
+.modal h3{font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:14px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:0.81rem;color:var(--text2);margin-bottom:5px;font-weight:600}
 .field .input,.field .select{width:100%}
-.check{display:flex;gap:8px;align-items:flex-start;font-size:.86rem;margin:6px 0}
-.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:60}
-.toast{background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--ok);border-radius:8px;padding:10px 14px;font-size:.86rem;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.check{display:flex;gap:9px;align-items:flex-start;font-size:0.86rem;margin:8px 0;cursor:pointer}
+.check input{margin-top:3px}
+.toasts{position:fixed;right:22px;bottom:22px;display:flex;flex-direction:column;gap:10px;z-index:100;pointer-events:none}
+.toast{
+  pointer-events:auto;display:flex;align-items:center;gap:10px;
+  background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:11px 15px;font-size:0.86rem;color:var(--text);max-width:420px;
+  box-shadow:var(--shadow);border-left:4px solid var(--ok);
+  animation:toastEnter 0.22s ease-out;
+}
 .toast.error{border-left-color:var(--bad)}
 .toast.warn{border-left-color:var(--warn)}
-.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.tab{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:.85rem}
-.tab[aria-selected="true"]{background:rgba(99,102,241,.2);border-color:var(--accent);color:#fff}
+.toast-icon{flex:none;display:flex;align-items:center;justify-content:center}
+.toast.ok .toast-icon{color:var(--ok)}
+.toast.error .toast-icon{color:var(--bad)}
+.toast.warn .toast-icon{color:var(--warn)}
+.toast-text{flex:1;word-break:break-word}
+.toast.toast-exit{opacity:0;transform:translateX(20px);transition:all 0.25s ease}
+@keyframes toastEnter{from{opacity:0;transform:translateY(12px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalScale{from{opacity:0;transform:scale(0.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.tabs{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:0.85rem;font-weight:500;transition:all .15s}
+.tab:hover{background:var(--hover)}
+.tab[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:#fff;font-weight:600}
 
-@media (max-width:1180px){.split{grid-template-columns:1fr}.detail{position:static;max-height:none}}
+/* ==================== Responsive Breakpoints ==================== */
+@media (max-width:1180px){
+  .split{grid-template-columns:1fr;gap:16px}
+  .detail{position:static;max-height:none}
+}
 @media (max-width:860px){
   .app{grid-template-columns:1fr}
-  .sidebar{grid-column:1;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--border)}
-  .nav-link{white-space:nowrap}.nav-sep{display:none}
+  #sidebarToggle{display:inline-flex !important}
+  .sidebar{
+    display:none;position:fixed;top:56px;left:0;right:0;bottom:0;
+    background:var(--surface);z-index:45;padding:18px 14px;
+    overflow-y:auto;border-right:0;box-shadow:var(--shadow-lg);
+  }
+  .sidebar.open{display:flex;flex-direction:column}
+  .topbar{padding:10px 14px;gap:10px;flex-wrap:wrap}
   .grid2{grid-template-columns:1fr}
-  .topbar{flex-wrap:wrap}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .main{padding:16px 14px}
+}
+@media (max-width:540px){
+  .stats{grid-template-columns:1fr}
+  .tg-kb{grid-template-columns:1fr}
+  .bar-row{grid-template-columns:120px 1fr 38px}
+  .brand small{display:none}
 }
 </style>
 </head>
 <body>
 <div class="app">
   <header class="topbar">
+    <button type="button" class="btn sm" id="sidebarToggle" aria-label="Открыть меню навигации" title="Меню навигации" style="display:none;margin-right:4px">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
     <div class="brand"><div class="logo" aria-hidden="true">GM</div><div>Grand Mobile Support Copilot<small>Админ-панель поддержки · ИИ-триаж, Telegram, OCR доказательств, Антифрод</small></div></div>
     <div class="spacer"></div>
     <div class="userbox">
@@ -231,6 +362,7 @@ ul.reasons{padding-left:18px;font-size:.82rem;color:var(--text2);display:flex;fl
 <script>
 /* ===================== Utilities ===================== */
 const ICONS = {
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
   overview:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
   mine:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/>',
   queue:'<path d="M4 6h16M4 12h16M4 18h10"/>',
@@ -287,11 +419,33 @@ async function api(method, path, body){
 }
 
 function toast(msg, type='ok'){
-  const el=document.createElement('div'); el.className='toast '+(type==='ok'?'':type); el.textContent=msg;
-  $('#toasts').appendChild(el); setTimeout(()=>el.remove(), type==='error'?6500:3500);
+  const el=document.createElement('div');
+  el.className='toast '+(type==='ok'?'ok':type);
+  const icon = type==='error' ? ic('alert') : (type==='warn' ? ic('alert') : ic('check'));
+  el.innerHTML=`<div class="toast-icon">${icon}</div><div class="toast-text">${esc(msg)}</div>`;
+  $('#toasts').appendChild(el);
+  setTimeout(()=>{
+    el.classList.add('toast-exit');
+    setTimeout(()=>el.remove(), 250);
+  }, type==='error'?6500:3500);
 }
 function errBox(e){ return `<div class="err" role="alert">${ic('alert')} ${e.status===403?'<b>Доступ запрещён (403).</b> ':''}${esc(e.message)}</div>`; }
-const loadingHTML = (t='Загрузка…') => `<div class="empty"><span class="spinner"></span> ${esc(t)}</div>`;
+const loadingHTML = (t='Загрузка данных…') => `<div class="skeleton-card">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--text2)">
+    <span class="spinner"></span> <span style="font-weight:600;font-size:0.9rem">${esc(t)}</span>
+  </div>
+  <div class="skel" style="width:45%;height:18px;margin-bottom:12px"></div>
+  <div class="skel" style="width:100%;height:14px;margin-bottom:8px"></div>
+  <div class="skel" style="width:85%;height:14px;margin-bottom:8px"></div>
+  <div class="skel" style="width:65%;height:14px"></div>
+</div>`;
+const emptyHTML = (title='Нет данных', desc='По заданным фильтрам или запросу ничего не найдено.', action=null) => `
+<div class="empty-state">
+  <div class="empty-icon">${ic('queue')}</div>
+  <h3>${esc(title)}</h3>
+  <p>${esc(desc)}</p>
+  ${action ? `<div style="margin-top:14px">${action}</div>` : ''}
+</div>`;
 
 async function copyText(text){
   try{ await navigator.clipboard.writeText(text); toast('Ответ скопирован в буфер обмена'); }
@@ -370,29 +524,32 @@ const COLS=[['id','ID'],['created_at','Время'],['category','Категор�
 
 function filtersHTML(opts={}){
   const m=S.meta;
-  const opt=(v,l)=>`<option value="${esc(v)}">${esc(l)}</option>`;
+  const f=S.filters||{};
+  const opt=(v,l,sel)=>`<option value="${esc(v)}" ${sel?'selected':''}>${esc(l)}</option>`;
   return `<div class="filters" role="search">
     <label class="sr-only" for="fq">Поиск</label>
-    <input id="fq" class="input" placeholder="Поиск по ID, нику, игровому ID, тексту… ( / )" />
-    <select id="fstatus" class="select" aria-label="Статус">${opt('','Все статусы')}${Object.entries(m.statuses).map(([k,v])=>opt(k,v)).join('')}</select>
-    <select id="fcategory" class="select" aria-label="Категория">${opt('','Все категории')}${m.categories.map(c=>opt(c.id,c.name)).join('')}</select>
-    <select id="fsubcategory" class="select" aria-label="Подкатегория">${opt('','Все подкатегории (DM, PG, Читы…)')}${(m.subcategories||[]).map(sc=>opt(sc.id,sc.name)).join('')}</select>
-    <select id="fpriority" class="select" aria-label="Приоритет">${opt('','Все приоритеты')}${m.priorities.map(p=>opt(p,PRIO[p]||p)).join('')}</select>
-    <select id="flanguage" class="select" aria-label="Язык">${opt('','Все языки')}${m.languages.map(l=>opt(l,l.toUpperCase()+' — '+LANGS[l])).join('')}</select>
-    <select id="fhandling" class="select" aria-label="Режим обработки">${opt('','Все режимы ИИ')}${opt('auto','🤖 Автоматически обработанные ИИ')}${opt('needs_human','👨‍💻 Переданные администрации')}${opt('suspicious','⚠️ Подозрительные (Антифрод)')}${opt('admin_call','🆘 Прямой вызов админа')}</select>
-    ${opts.assignee!==false?`<select id="fassignee" class="select" aria-label="Исполнитель">${opt('','Все исполнители')}${opt('none','Не назначен')}${S.users.map(u=>opt(u.id,u.name)).join('')}</select>`:''}
-    <select id="fesc" class="select" aria-label="Эскалация">${opt('','Эскалация: все')}${opt('true','Только эскалированные')}${opt('false','Без эскалации')}</select>
-    <button class="btn sm" id="freset" type="button">Сбросить</button>
+    <input id="fq" class="input" placeholder="Поиск по ID, нику, игровому ID, тексту… ( / )" value="${esc(f.q||'')}" title="Поиск (нажмите / для быстрого фокуса)" />
+    <select id="fstatus" class="select" aria-label="Статус" title="Фильтр по статусу">${opt('','Все статусы',!f.status)}${Object.entries(m.statuses).map(([k,v])=>opt(k,v,f.status===k)).join('')}</select>
+    <select id="fcategory" class="select" aria-label="Категория" title="Фильтр по категории">${opt('','Все категории',!f.category)}${m.categories.map(c=>opt(c.id,c.name,f.category===c.id)).join('')}</select>
+    <select id="fsubcategory" class="select" aria-label="Подкатегория" title="Фильтр по подкатегории">${opt('','Все подкатегории (DM, PG, Читы…)',!f.subcategory)}${(m.subcategories||[]).map(sc=>opt(sc.id,sc.name,f.subcategory===sc.id)).join('')}</select>
+    <select id="fpriority" class="select" aria-label="Приоритет" title="Фильтр по приоритету">${opt('','Все приоритеты',!f.priority)}${m.priorities.map(p=>opt(p,PRIO[p]||p,f.priority===p)).join('')}</select>
+    <select id="flanguage" class="select" aria-label="Язык" title="Фильтр по языку">${opt('','Все языки',!f.language)}${m.languages.map(l=>opt(l,l.toUpperCase()+' — '+LANGS[l],f.language===l)).join('')}</select>
+    <select id="fhandling" class="select" aria-label="Режим обработки" title="Фильтр по режиму ИИ">${opt('','Все режимы ИИ',!f.handling_mode)}${opt('auto','🤖 Автоматически обработанные ИИ',f.handling_mode==='auto')}${opt('needs_human','👨‍💻 Переданные администрации',f.handling_mode==='needs_human')}${opt('suspicious','⚠️ Подозрительные (Антифрод)',f.handling_mode==='suspicious')}${opt('admin_call','🆘 Прямой вызов админа',f.handling_mode==='admin_call')}</select>
+    ${opts.assignee!==false?`<select id="fassignee" class="select" aria-label="Исполнитель" title="Фильтр по исполнителю">${opt('','Все исполнители',!f.assignee)}${opt('none','Не назначен',f.assignee==='none')}${S.users.map(u=>opt(u.id,u.name,f.assignee===u.id)).join('')}</select>`:''}
+    <select id="fesc" class="select" aria-label="Эскалация" title="Фильтр по эскалации">${opt('','Эскалация: все',!f.escalated)}${opt('true','Только эскалированные',f.escalated==='true')}${opt('false','Без эскалации',f.escalated==='false')}</select>
+    <button class="btn sm" id="freset" type="button" title="Очистить все установленные фильтры">${ic('refresh')}Сбросить</button>
   </div>`;
 }
 function readFilters(){
   const v=id=>{ const el=$('#'+id); return el?el.value:''; };
-  return {q:v('fq'),status:v('fstatus'),category:v('fcategory'),subcategory:v('fsubcategory'),priority:v('fpriority'),language:v('flanguage'),handling_mode:v('fhandling'),assignee:v('fassignee'),escalated:v('fesc')};
+  const f={q:v('fq'),status:v('fstatus'),category:v('fcategory'),subcategory:v('fsubcategory'),priority:v('fpriority'),language:v('flanguage'),handling_mode:v('fhandling'),assignee:v('fassignee'),escalated:v('fesc')};
+  S.filters=f;
+  return f;
 }
 function bindFilters(reload){
   let t; $('#fq').addEventListener('input',()=>{clearTimeout(t); t=setTimeout(reload,220);});
   ['fstatus','fcategory','fsubcategory','fpriority','flanguage','fhandling','fassignee','fesc'].forEach(id=>{ const el=$('#'+id); if(el) el.addEventListener('change',reload); });
-  $('#freset').onclick=()=>{ document.querySelectorAll('.filters input,.filters select').forEach(el=>el.value=''); reload(); };
+  $('#freset').onclick=()=>{ S.filters={}; document.querySelectorAll('.filters input,.filters select').forEach(el=>el.value=''); reload(); };
 }
 
 async function fetchList(scope){
@@ -402,7 +559,12 @@ async function fetchList(scope){
 }
 
 function tableHTML(rows, caption){
-  if(!rows.length) return `<div class="table-wrap"><div class="empty">Обращений по заданным условиям нет.</div></div>`;
+  if(!rows.length) return `<div class="table-wrap"><div class="empty-state">
+    <div class="empty-icon">${ic('queue')}</div>
+    <h3>Обращений не найдено</h3>
+    <p>По заданным фильтрам и условиям поиска обращения отсутствуют. Попробуйте сбросить фильтры или изменить критерии запроса.</p>
+    <div style="margin-top:14px"><button class="btn sm" type="button" onclick="$('#freset')&&$('#freset').click()">${ic('refresh')}Сбросить фильтры</button></div>
+  </div></div>`;
   const th=COLS.map(([k,l])=>{
     if(!k) return `<th scope="col"><span class="th">${l}</span></th>`;
     const active=S.list.sort===k; const dir=active?(S.list.order==='asc'?'ascending':'descending'):'none';
@@ -809,7 +971,12 @@ PAGES.telegram=async(main)=>{
   const st=d.status||{};
   const admins=st.admins||[];
   main.innerHTML=`<div class="page-head"><div><h1>Telegram-уведомления администраторам</h1><p>Автоматические оповещения о жалобах, распределение нагрузки между администраторами, кнопки «Принять жалобу» и SLA-напоминания.</p></div>
-    <div class="actions"><button type="button" class="btn warn" id="tgRemind">⏰ Проверить SLA и отправить напоминания</button><button type="button" class="btn" id="tgRefresh">${ic('refresh')}Обновить</button></div></div>
+    <div class="actions">
+      <button type="button" class="btn" id="tgTestConn">🔌 Проверить связь с ботом</button>
+      <button type="button" class="btn ok" id="tgTestSend">✉️ Отправить тест</button>
+      <button type="button" class="btn warn" id="tgRemind">⏰ Проверить SLA и напомнить</button>
+      <button type="button" class="btn" id="tgRefresh">${ic('refresh')}Обновить</button>
+    </div></div>
     <div class="banner ${st.live_bot_configured?'auto':'info'}" style="margin-bottom:14px">
       <b>Статус Telegram-бота: ${st.live_bot_configured?'Подключён к Telegram Bot API':'Локальный режим + интерактивная лента (Токен задаётся в .env)'}</b>
       ${esc(st.config_hint||'')} · Порог напоминания: ${st.reminder_minutes_threshold||15} мин. · Всего уведомлений: ${st.total_notifications||0} (ожидают: ${st.pending_notifications||0}, принято: ${st.accepted_notifications||0}, напоминаний: ${st.total_reminders_sent||0})
@@ -818,19 +985,41 @@ PAGES.telegram=async(main)=>{
       <div class="table-wrap"><table><thead><tr><th><span class="th">Администратор</span></th><th><span class="th">Роль</span></th><th><span class="th">Telegram</span></th><th><span class="th">Активная нагрузка</span></th><th><span class="th">Всего распределено</span></th><th><span class="th">Принято</span></th></tr></thead>
       <tbody>${admins.map(a=>`<tr><td><b>${esc(a.name)}</b></td><td>${esc(a.role_label)}</td><td class="id">${esc(a.telegram_username)}</td><td><span class="b ${a.active_load>2?'p-high':'b-auto'}">${a.active_load} в работе</span></td><td>${a.assigned_count}</td><td>${a.accepted_count}</td></tr>`).join('')}</tbody></table></div>
     </div>
-    <div class="stack" id="tgFeed">${d.notifications.length?d.notifications.map(n=>`<div class="tg-msg">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span class="b ${n.status==='accepted'?'b-auto':'p-high'}">${n.status==='accepted'?'✅ Принято: '+esc(n.accepted_by_name):'⏳ Ожидает принятия'}</span>
+    <div class="stack" id="tgFeed">${d.notifications.length?d.notifications.map(n=>{
+      const cbData = (n.inline_keyboard&&n.inline_keyboard[0]&&n.inline_keyboard[0][0]&&n.inline_keyboard[0][0].callback_data)||'';
+      const modeBadge = n.delivery_mode==='telegram_bot_api'?'<span class="b b-auto">✈️ Telegram Bot API</span>':(n.delivery_mode==='api_error'?'<span class="b p-critical">⚠️ Ошибка Telegram API</span>':'<span class="b b-muted">📦 Локальный outbox</span>');
+      return `<div class="tg-msg">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="b ${n.status==='accepted'?'b-auto':'p-high'}">${n.status==='accepted'?'✅ Принято: '+esc(n.accepted_by_name):'⏳ Ожидает принятия'}</span>
+          ${modeBadge}
+        </div>
         <span class="small muted">${fmtTime(n.created_at)} · Назначен: <b>${esc(n.assigned_admin_name)}</b> (${esc(n.assigned_admin_tg)}) ${n.reminders_sent?`· ⏰ Напоминаний: ${n.reminders_sent}`:''}</span>
       </div>
       <div style="white-space:pre-wrap">${n.text_html}</div>
       <div class="tg-kb">
-        <button type="button" class="tg-btn" data-cb="${esc(n.inline_keyboard[0][0].callback_data)}" ${n.status==='accepted'?'disabled':''}>${n.status==='accepted'?'✅ Жалоба принята':'✅ Принять жалобу'}</button>
+        ${cbData?`<button type="button" class="tg-btn" data-cb="${esc(cbData)}" ${n.status==='accepted'?'disabled':''}>${n.status==='accepted'?'✅ Жалоба принята':'✅ Принять жалобу'}</button>`:''}
         <a class="tg-btn" href="${esc(n.ticket_id?'#junior/'+encodeURIComponent(n.ticket_id):'#admin-calls')}">🔗 Открыть жалобу</a>
       </div>
-    </div>`).join(''):'<div class="card empty">Уведомлений пока нет.</div>'}</div>`;
+    </div>`;
+    }).join(''):'<div class="card empty">Уведомлений пока нет.</div>'}</div>`;
 
   $('#tgRefresh').onclick=()=>PAGES.telegram(main);
+  $('#tgTestConn').onclick=async()=>{
+    try{
+      const r=await api('POST','/api/telegram/test-connection');
+      if(r.ok){ toast(`✅ Бот подключён: @${r.bot_username} (${r.bot_name})`,'ok'); }
+      else { toast(`⚠️ Статус бота: ${r.error||r.status}`,'warn'); }
+      PAGES.telegram(main);
+    }catch(e){ toast(e.message,'error'); }
+  };
+  $('#tgTestSend').onclick=async()=>{
+    try{
+      const r=await api('POST','/api/telegram/test-send',{text:'Тестовое уведомление из панели управления Telegram'});
+      toast(`Тест отправлен: ${r.delivery_mode} (${r.status})`,r.ok?'ok':'warn');
+      PAGES.telegram(main);
+    }catch(e){ toast(e.message,'error'); }
+  };
   $('#tgRemind').onclick=async()=>{
     try{
       const r=await api('POST','/api/telegram/check-reminders?max_age_minutes=0');
@@ -935,26 +1124,72 @@ PAGES.evidence=async(main)=>{
   </div>`;
 
   let presetFilename='screenshot_srv5_time.png';
+  let activePreviewHtml='';
+
+  function setPresetPreview(type, title, subtitle, details){
+    activePreviewHtml=`<div class="card" style="margin-bottom:12px;background:#0d1117;border:1px solid #30363d;padding:12px;border-radius:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span class="b ${type==='video'?'b-subcat':'b-cat'}">${type==='video'?'🎬 Видеозапись MP4 (кадр 14:32)':'📷 Скриншот PNG HUD'}</span>
+        <span class="small muted">Виртуальный дисплей Grand Mobile</span>
+      </div>
+      <div style="background:#030712;padding:14px;border-radius:6px;border:1px dashed #374151;font-family:monospace;color:#e5e7eb">
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1f2937;padding-bottom:6px;margin-bottom:8px;font-size:12px">
+          <span style="color:#ef4444;font-weight:bold">GRAND MOBILE</span>
+          <span style="color:#10b981">${esc(subtitle)}</span>
+        </div>
+        <div style="font-size:13px;line-height:1.5;margin-bottom:8px">${esc(title)}</div>
+        <div style="font-size:11px;color:#9ca3af;background:#111827;padding:6px;border-radius:4px">${esc(details)}</div>
+      </div>
+    </div>`;
+  }
+
+  setPresetPreview('image', '[Chat] Ivan_Grozny [142]: ты нуб', 'SERVER #5 | /time 14:32:10', 'HUD GPS: 142.9, -58.2 | Ping: 42ms | FPS: 60');
+
   $('#evPreset1').onclick=()=>{
     presetFilename='screenshot_srv5_time.png';
+    $('#evFile').value='';
     $('#evCat').value='insult_toxicity';
     $('#evText').value='Игрок Ivan_Grozny [142] оскорбил меня в чате на 5 сервере, скриншот с /time приложил';
     $('#evOcr').value='Grand Mobile | Server #5 | /time 14:32:10 | Ivan_Grozny [142]: оскорбление в чате';
+    setPresetPreview('image', '[Chat] Ivan_Grozny [142]: ты нуб', 'SERVER #5 | /time 14:32:10', 'HUD GPS: 142.9, -58.2 | Ping: 42ms | FPS: 60');
     runEv();
   };
   $('#evPreset2').onclick=()=>{
     presetFilename='wrong_evidence.jpg';
+    $('#evFile').value='';
     $('#evCat').value='rp_violation';
     $('#evText').value='Игрок Maksim_Killer [505] убил меня без причины на 5 сервере, видео приложил';
     $('#evOcr').value='Grand Mobile | Server #2 | Oleg_Mirny [119]: привет всем';
+    setPresetPreview('image', '[Chat] Oleg_Mirny [119]: привет всем', 'SERVER #2 | /time 09:12:00', '⚠️ Внимание: скриншот сделан на сервере #2 игроком Oleg_Mirny, а не Maksim_Killer на сервере #5');
     runEv();
   };
   $('#evPreset3').onclick=()=>{
     presetFilename='cheat_speedhack_capture.mp4';
+    $('#evFile').value='';
     $('#evCat').value='cheating_exploits';
     $('#evText').value='Читер Dark_Hack [666] летает на спидхаке на 3 сервере, видеозапись приложил';
     $('#evOcr').value='Grand Mobile | Server #3 | /time 19:05:44 | Dark_Hack [666] speedhack telemetry';
+    setPresetPreview('video', 'Телеметрия ускорения: Dark_Hack [666] Speed: 340 km/h (лимит 120)', 'SERVER #3 | /time 19:05:44', '🎬 Видео MP4 (18.5 сек, 1080p, 60fps) — контрольные точки 0.0с, 5.2с, 11.8с, 18.0с');
     runEv();
+  };
+
+  $('#evFile').onchange=()=>{
+    const fileInput=$('#evFile');
+    if(fileInput.files && fileInput.files[0]){
+      const file = fileInput.files[0];
+      const isVid = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm)$/i);
+      const objUrl = URL.createObjectURL(file);
+      activePreviewHtml=`<div class="card" style="margin-bottom:12px;background:#0d1117;border:1px solid #30363d;padding:12px;border-radius:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="b ${isVid?'b-subcat':'b-cat'}">${isVid?'🎬 Видеоплеер':'📷 Предпросмотр изображения'} (${esc(file.name)})</span>
+          <span class="small muted">${(file.size/1024).toFixed(1)} КБ</span>
+        </div>
+        <div style="display:flex;justify-content:center;background:#030712;padding:8px;border-radius:6px;max-height:360px;overflow:hidden">
+          ${isVid ? `<video src="${objUrl}" controls style="max-width:100%;max-height:320px;border-radius:4px"></video>` : `<img src="${objUrl}" alt="Доказательство" style="max-width:100%;max-height:320px;object-fit:contain;border-radius:4px" />`}
+        </div>
+      </div>`;
+      toast('Файл выбран: ' + file.name);
+    }
   };
 
   async function runEv(){
@@ -963,12 +1198,28 @@ PAGES.evidence=async(main)=>{
       const fileInput=$('#evFile');
       let rep;
       if(fileInput.files && fileInput.files[0]){
+        const file = fileInput.files[0];
+        const isVid = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm)$/i);
+        const objUrl = URL.createObjectURL(file);
+        activePreviewHtml=`<div class="card" style="margin-bottom:12px;background:#0d1117;border:1px solid #30363d;padding:12px;border-radius:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span class="b ${isVid?'b-subcat':'b-cat'}">${isVid?'🎬 Видеоплеер':'📷 Предпросмотр изображения'} (${esc(file.name)})</span>
+            <span class="small muted">${(file.size/1024).toFixed(1)} КБ</span>
+          </div>
+          <div style="display:flex;justify-content:center;background:#030712;padding:8px;border-radius:6px;max-height:360px;overflow:hidden">
+            ${isVid ? `<video src="${objUrl}" controls style="max-width:100%;max-height:320px;border-radius:4px"></video>` : `<img src="${objUrl}" alt="Доказательство" style="max-width:100%;max-height:320px;object-fit:contain;border-radius:4px" />`}
+          </div>
+        </div>`;
         const fd=new FormData();
-        fd.append('file', fileInput.files[0]);
+        fd.append('file', file);
         fd.append('complaint_text', $('#evText').value);
         fd.append('category', $('#evCat').value);
         fd.append('ocr_hint', $('#evOcr').value);
         const r=await fetch('/api/evidence/upload',{method:'POST',headers:{'X-Demo-User':S.userId},body:fd});
+        if(!r.ok){
+          const errData=await r.json().catch(()=>({}));
+          throw new Error(errData.detail || `Ошибка сервера (${r.status}): ${r.statusText}`);
+        }
         rep=await r.json();
       } else {
         rep=await api('POST','/api/evidence/analyze',{
@@ -984,6 +1235,7 @@ PAGES.evidence=async(main)=>{
     const f0=(r.files&&r.files[0])||{};
     const va=f0.video_analysis;
     $('#evOut').innerHTML=`<div class="stack">
+      ${activePreviewHtml}
       <div class="banner ${r.is_consistent?'auto':'human'}">
         <b>Статус верификации: ${r.is_consistent?'✅ Доказательства согласованы с жалобой':'⚠️ Выявлены противоречия между текстом и доказательствами'} (Consistency: ${Math.round((r.consistency_score||0)*100)}%)</b>
         ${esc(r.admin_report||'')}
@@ -1256,6 +1508,7 @@ PAGES.settings=async(main)=>{
   let d;
   try{ d=await api('GET','/api/ws/settings'); }
   catch(e){ main.innerHTML=`<div class="page-head"><div><h1>Настройки</h1></div></div>${errBox(e)}`; return; }
+  const tgSt = d.system.telegram_status || {};
   main.innerHTML=`<div class="page-head"><div><h1>Настройки</h1><p>Доступно только старшему администратору (проверяется на backend).</p></div></div>
   <div class="grid2"><form class="card" id="setForm"><h2>Политики очереди</h2>
     <label class="check"><input type="checkbox" name="junior_can_view_unassigned" ${d.settings.junior_can_view_unassigned?'checked':''}> Младшие видят общую очередь без исполнителя</label>
@@ -1266,11 +1519,32 @@ PAGES.settings=async(main)=>{
     <div><span>Режим</span><b>${d.system.demo_mode?'DEMO (без аутентификации)':'production'}</b></div>
     <div><span>LLM</span><b>${d.system.llm_enabled?'включена: '+esc(d.system.llm_model):'выключена (локальный генератор, $0)'}</b></div>
     <div><span>Источник правил</span><b>${esc(d.system.rules_source)} · ${d.system.rules_count} пунктов</b></div>
-    <div><span>Ключи API и Telegram</span><b>Хранятся только в .env на сервере</b></div></div>
-    <div class="actions" style="margin-top:12px"><button class="btn danger" type="button" id="resetDemo">${ic('refresh')}Сбросить демо-данные</button></div></div></div>`;
+    <div><span>Telegram Bot</span><b>${tgSt.live_bot_configured?'✅ Live Bot API подключён':'📦 Локальный outbox (.env)'}</b></div>
+    <div><span>Chat ID администраторов</span><b>${tgSt.chat_id_configured?'Настроен':'Не задан (TELEGRAM_ADMIN_CHAT_ID)'}</b></div>
+    <div><span>Игровой API Grand Mobile</span><b>${d.system.grand_mobile_api_status&&d.system.grand_mobile_api_status.configured?'Подключён':'Демо-слой с поддержкой моста'}</b></div></div>
+    <div class="actions" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+      <button class="btn" type="button" id="setTgTest">🔌 Проверить связь с Telegram</button>
+      <button class="btn ok" type="button" id="setTgSend">✉️ Отправить тест в Telegram</button>
+      <button class="btn danger" type="button" id="resetDemo">${ic('refresh')}Сбросить демо-данные</button>
+    </div></div></div>`;
   $('#setForm').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
     try{ await api('PUT','/api/ws/settings',{junior_can_view_unassigned:fd.get('junior_can_view_unassigned')==='on',junior_can_send_without_review:fd.get('junior_can_send_without_review')==='on'}); toast('Настройки сохранены'); }
     catch(err){ toast(err.message,'error'); } };
+  $('#setTgTest').onclick=async()=>{
+    try{
+      const res=await api('POST','/api/telegram/test-connection');
+      if(res.ok){ toast(`✅ Бот подключён: @${res.bot_username} (${res.bot_name})`,'ok'); }
+      else { toast(`⚠️ Статус бота: ${res.error||res.status}`,'warn'); }
+      PAGES.settings(main);
+    }catch(err){ toast(err.message,'error'); }
+  };
+  $('#setTgSend').onclick=async()=>{
+    try{
+      const res=await api('POST','/api/telegram/test-send',{text:'Тестовое уведомление из настроек Grand Mobile AI Support'});
+      toast(`Тест отправлен: ${res.delivery_mode} (${res.status})`,res.ok?'ok':'warn');
+      PAGES.settings(main);
+    }catch(err){ toast(err.message,'error'); }
+  };
   $('#resetDemo').onclick=()=>openModal({title:'Сбросить демо-данные?',submit:'Сбросить',kind:'danger',body:'<p>Все тикеты, черновики и журнал будут пересозданы из исходного набора данных.</p>',
     onSubmit:async()=>{ await api('POST','/api/ws/demo/reset'); toast('Демо-данные сброшены'); refreshCounts(); }});
 };
@@ -1282,6 +1556,8 @@ async function loadIdentity(){
   $('#roleBadge').className='b '+(S.user.role==='senior_admin'?'p-critical':'b-lang');
 }
 async function boot(){
+  const sToggle = $('#sidebarToggle');
+  if(sToggle) sToggle.onclick=()=>$('#sidebar').classList.toggle('open');
   try{
     S.users=await fetch('/api/ws/users',{headers:{'X-Demo-User':S.userId}}).then(r=>r.ok?r.json():Promise.reject(new Error('users')));
   }catch(_){ S.userId='junior_1'; localStorage.setItem('gm_demo_user','junior_1'); S.users=await api('GET','/api/ws/users'); }

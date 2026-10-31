@@ -97,10 +97,19 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         cls.valid_rule_ids = cls.service.rag.valid_rule_ids
         cls.valid_categories = cls.service.taxonomy.valid_categories
         cls.valid_priorities = cls.service.taxonomy.valid_priorities
+        cls._weights_path = Path("models/classifier_weights.json")
+        cls._orig_weights = cls._weights_path.read_text(encoding="utf-8") if cls._weights_path.exists() else None
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if cls._orig_weights and cls._weights_path:
+            cls._weights_path.write_text(cls._orig_weights, encoding="utf-8")
 
     def setUp(self) -> None:
         self.service.extractor.reset_cache()
         triage_service.extractor.reset_cache()
+        from app.fraud_detector import fraud_detector
+        fraud_detector.reset()
 
     def _assert_valid_schema_and_rules(self, data: Dict[str, Any]) -> TriageResponse:
         """Verify output strictly conforms to TriageResponse schema, taxonomy.json, and rules.json."""

@@ -275,6 +275,19 @@ async def get_telegram_status() -> Dict[str, Any]:
     return telegram_notifier.get_status()
 
 
+@app.post("/api/telegram/test-connection", tags=["Telegram Notifications"])
+async def test_telegram_connection() -> Dict[str, Any]:
+    """Verify live connection to Telegram Bot API by querying getMe."""
+    return telegram_notifier.test_connection()
+
+
+@app.post("/api/telegram/test-send", tags=["Telegram Notifications"])
+async def test_send_telegram_notification(payload: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Send a real test notification to verify delivery in Telegram chat."""
+    text = (payload or {}).get("text")
+    return telegram_notifier.send_test_message(text=text)
+
+
 @app.get("/api/telegram/notifications", tags=["Telegram Notifications"])
 async def list_telegram_notifications(
     status: Optional[str] = None,
@@ -307,20 +320,98 @@ async def handle_telegram_callback(payload: TelegramCallbackRequest) -> Dict[str
 
 @app.post("/api/telegram/webhook", tags=["Telegram Notifications"])
 async def telegram_bot_webhook(request: Request) -> Dict[str, Any]:
-    """Standard Telegram Bot API webhook receiver for callback_query updates."""
+    """
+    Standard Telegram Bot API webhook receiver.
+    Handles callback_query (inline buttons with automatic acknowledgment)
+    and chat commands (/start, /help, /queue, /status, /calls, /remind).
+    """
     data = await request.json()
     cb = data.get("callback_query")
-    if not cb:
-        return {"ok": True, "ignored": True}
-    cb_data = cb.get("data", "")
-    user = cb.get("from", {})
-    admin_id = str(user.get("id") or "senior_1")
-    admin_name = user.get("first_name") or user.get("username") or "Telegram Admin"
-    return telegram_notifier.handle_callback(
-        callback_data=cb_data,
-        admin_id=admin_id,
-        admin_name=admin_name,
-    )
+    if cb:
+        cb_id = cb.get("id")
+        cb_data = cb.get("data", "")
+        user = cb.get("from", {})
+        admin_id = str(user.get("id") or "senior_1")
+        admin_name = user.get("first_name") or user.get("username") or "Telegram Admin"
+        res = telegram_notifier.handle_callback(
+            callback_data=cb_data,
+            admin_id=admin_id,
+            admin_name=admin_name,
+        )
+        if settings.telegram_bot_token and cb_id:
+            try:
+                import httpx
+                with httpx.Client(timeout=3.0) as client:
+                    client.post(
+                        f"https://api.telegram.org/bot{settings.telegram_bot_token}/answerCallbackQuery",
+                        json={"callback_query_id": cb_id, "text": "✅ Обращение принято в работу!", "show_alert": False},
+                    )
+            except Exception as exc:
+                logger.debug("answerCallbackQuery failed: %s", exc)
+        return res
+
+    msg = data.get("message")
+    if msg:
+        chat_id = msg.get("chat", {}).get("id")
+        text = (msg.get("text") or "").strip()
+        if chat_id and text.startswith("/"):
+            reply_text = ""
+            if text in ("/start", "/help"):
+                reply_text = (
+                    "🤖 <b>Grand Mobile Support Copilot Bot</b>\n\n"
+                    "Доступные команды:\n"
+                    "• /status — статус системы и дежурных администраторов\n"
+                    "• /queue — текущая очередь обращений\n"
+                    "• /calls — прямые вызовы живого администратора\n"
+                    "• /remind — проверить SLA и отправить напоминания\n\n"
+                    f"Панель оператора: {settings.dashboard_base_url}"
+                )
+            elif text == "/status":
+                st = telegram_notifier.get_status()
+                reply_text = (
+                    f"📊 <b>Статус Support Copilot</b>\n\n"
+                    f"• Уведомлений: {st['total_notifications']} (ожидают: {st['pending_notifications']})\n"
+                    f"• Прямых вызовов: {admin_request_store.get_waiting_count()} в ожидании\n"
+                    f"• Дежурных администраторов: {len(st.get('admins', []))}\n"
+                    f"• Режим: {st['delivery_mode']}"
+                )
+            elif text == "/queue":
+                pending = telegram_notifier.list_notifications(status="pending", limit=5)
+                if not pending:
+                    reply_text = "✅ Очередь пуста! Все обращения рассмотрены."
+                else:
+                    lines = ["📋 <b>Очередь ожидающих обращений:</b>"]
+                    for p in pending:
+                        lines.append(f"• <code>{p['ref_id']}</code>: {p['category_name']} ({p['priority'].upper()})")
+                    lines.append(f"\nОткрыть панель: {settings.dashboard_base_url}")
+                    reply_text = "\n".join(lines)
+            elif text == "/calls":
+                ar_waiting = admin_request_store.list_requests(status="WAITING", limit=5)
+                if not ar_waiting:
+                    reply_text = "✅ Нет ожидающих прямых вызовов администратора."
+                else:
+                    lines = ["🆘 <b>Прямые вызовы живого администратора:</b>"]
+                    for ar in ar_waiting:
+                        lines.append(f"• <code>{ar['id']}</code>: Игрок {ar.get('player_nickname', 'Гость')} (Сервер #{ar.get('server', '?')})")
+                    lines.append(f"\nПринять: {settings.dashboard_base_url}/#admin-calls")
+                    reply_text = "\n".join(lines)
+            elif text == "/remind":
+                rems = telegram_notifier.check_and_send_reminders(max_age_minutes=0)
+                reply_text = f"⏰ Проверено SLA. Отправлено напоминаний: {len(rems)}"
+
+            if reply_text and settings.telegram_bot_token:
+                try:
+                    import httpx
+                    with httpx.Client(timeout=3.5) as client:
+                        client.post(
+                            f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
+                            json={"chat_id": chat_id, "text": reply_text, "parse_mode": "HTML"},
+                        )
+                except Exception as exc:
+                    logger.debug("Telegram command reply failed: %s", exc)
+            return {"ok": True, "event": "command", "command": text, "reply": reply_text, "command_handled": bool(reply_text)}
+
+    return {"ok": True, "ignored": True}
 
 
 @app.post("/api/telegram/check-reminders", tags=["Telegram Notifications"])

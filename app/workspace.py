@@ -1105,6 +1105,10 @@ def create_router(store: WorkspaceStore) -> APIRouter:
     async def demo_reset(user=Depends(get_current_user)):
         require_senior(user)
         store.reset()
+        admin_request_store.reset()
+        telegram_notifier.reset()
+        fraud_detector.reset()
+        player_history_store.reset()
         store._ensure_demo_notifications_and_calls()
         with store.lock:
             store._log(user, "demo_reset", None, {})
