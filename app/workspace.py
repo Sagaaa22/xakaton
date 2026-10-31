@@ -48,13 +48,19 @@ STATUSES: Dict[str, str] = {
 }
 FINAL_STATUSES = {"resolved", "closed"}
 WORKING_STATUSES = {"in_progress", "returned", "awaiting_player"}
-PRIORITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+PRIORITY_RANK = {
+    "p0": 4, "p1": 3, "p2": 2, "p3": 1,
+    "critical": 4, "high": 3, "medium": 2, "low": 1,
+}
 
 ACTIONS = [
     "take", "assign", "retriage", "save_draft", "request_info",
     "send_reply", "escalate", "approve", "return", "close",
 ]
 ACTION_LABELS = {
+    "ticket_created": "Поступил новый репорт",
+    "ticket_imported": "Импортирован из датасета",
+    "view_ticket": "Открыл репорт",
     "take": "Взять в работу",
     "assign": "Переназначить",
     "retriage": "Перегенерировать анализ",
@@ -65,6 +71,7 @@ ACTION_LABELS = {
     "approve": "Одобрить решение",
     "return": "Вернуть на доработку",
     "close": "Закрыть",
+    "assistant_saved": "Сохранено через AI Assistant",
 }
 
 DECISIONS: Dict[str, str] = {
@@ -80,9 +87,10 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "junior_can_send_without_review": True,
 }
 
-# Ground-truth label fields from datasets must never leak into triage input/facts
-LABEL_KEYS = {"category", "priority", "label", "is_synthetic_demo"}
-STATE_VERSION = 2
+# Ground-truth label/outcome fields from datasets must never leak into triage input/facts
+LABEL_KEYS = {"category", "priority", "label", "is_synthetic_demo", "verdict", "punishment", "violation"}
+STATE_VERSION = 5
+URGENT_PRIORITIES = {"p0", "p1", "critical", "high"}
 
 
 def _now() -> str:
@@ -149,14 +157,49 @@ class WorkspaceStore:
         if self.persist_path and self.persist_path.exists():
             try:
                 data = json.loads(self.persist_path.read_text(encoding="utf-8"))
-                if data.get("version") == STATE_VERSION:
-                    self.tickets = data.get("tickets", {})
+                raw_tickets = data.get("tickets")
+                if isinstance(raw_tickets, dict) and raw_tickets:
+                    self.tickets = raw_tickets
                     self.audit = data.get("audit", [])
                     self.settings = {**DEFAULT_SETTINGS, **data.get("settings", {})}
+                    if data.get("version") != STATE_VERSION or self._needs_migration():
+                        self._migrate_state(data.get("version", 1))
+                        self._save()
                     return
             except Exception:
                 pass
         self.reset()
+
+    def _needs_migration(self) -> bool:
+        for t in self.tickets.values():
+            if "read_by" not in t or "extra_meta" not in t:
+                return True
+            esc = t.get("escalation")
+            if isinstance(esc, dict) and "seen_by" not in esc:
+                return True
+        return False
+
+    def _migrate_state(self, from_version: int) -> None:
+        """Non-destructive migration preserving all existing tickets, audit entries, and settings."""
+        for tid, t in self.tickets.items():
+            if "read_by" not in t or not isinstance(t.get("read_by"), list):
+                read_by: List[str] = []
+                if t.get("assignee") and t.get("status") not in ("new", "returned"):
+                    read_by.append(t["assignee"])
+                t["read_by"] = read_by
+            if "extra_meta" not in t or not isinstance(t.get("extra_meta"), dict):
+                t["extra_meta"] = {}
+            esc = t.get("escalation")
+            if isinstance(esc, dict) and "seen_by" not in esc:
+                esc["seen_by"] = []
+            rev = t.get("review")
+            if isinstance(rev, dict) and "seen_by" not in rev:
+                rev["seen_by"] = []
+            tr = t.get("triage") or {}
+            # Migrate legacy priority codes if an old state v1-v3 was loaded
+            legacy_prio = {"critical": "p0", "high": "p1", "medium": "p2", "low": "p3"}
+            if tr.get("priority") in legacy_prio:
+                tr["priority"] = legacy_prio[tr["priority"]]
 
     def reset(self) -> None:
         with self.lock:
@@ -167,8 +210,24 @@ class WorkspaceStore:
             self._save()
 
     # ---------- triage ----------
-    def run_triage(self, kind: str, messages: List[Dict[str, Any]], ticket_id: Optional[str]) -> Dict[str, Any]:
-        req = TriageRequest(id=ticket_id, kind=kind or "complaint", messages=messages, regenerate=True)
+    def run_triage(
+        self,
+        kind: str,
+        messages: List[Dict[str, Any]],
+        ticket_id: Optional[str],
+        extra_meta: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        meta = extra_meta or {}
+        req = TriageRequest(
+            id=ticket_id,
+            kind=kind or "complaint",
+            messages=messages,
+            images_count=meta.get("images_count"),
+            reported_nick=meta.get("reported_nick"),
+            rule_refs_raw=meta.get("rule_refs_raw"),
+            region=meta.get("region"),
+            regenerate=True,
+        )
         return self.svc.analyze(req, record_cache=False).dict()
 
     def rule_verification(self, triage: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -201,20 +260,38 @@ class WorkspaceStore:
         if not self.seed_path or not Path(self.seed_path).exists():
             return
         lines = [ln for ln in Path(self.seed_path).read_text(encoding="utf-8").splitlines() if ln.strip()]
-        base = datetime.now(timezone.utc) - timedelta(minutes=17 * len(lines))
-        for i, line in enumerate(lines[:40]):
-            raw = json.loads(line)
+        parsed_raw = [json.loads(ln) for ln in lines[:1000]]
+        complaints = [r for r in parsed_raw if r.get("kind") != "report"]
+        reports = [r for r in parsed_raw if r.get("kind") == "report"]
+        selected = (complaints[:25] + reports[:15]) if reports else parsed_raw[:40]
+        base = datetime.now(timezone.utc) - timedelta(minutes=17 * len(selected))
+        for i, raw in enumerate(selected[:40]):
             clean = {k: v for k, v in raw.items() if k not in LABEL_KEYS}
-            tid = str(clean.get("id") or f"tkt_{i + 1:04d}")
-            messages = clean.get("messages") or []
+            tid = str(clean.get("id") or clean.get("ticket_id") or f"tkt_{i + 1:04d}")
+            raw_msgs = clean.get("messages") or []
+            messages = [
+                m for m in raw_msgs
+                if isinstance(m, dict) and str(m.get("role", "player")).lower() not in ("admin", "moderator", "support")
+            ] or raw_msgs
+            imgs = int(clean.get("images_count") or 0)
+            if imgs > 0 and messages and not messages[0].get("attachments"):
+                messages = [dict(messages[0], attachments=imgs)] + messages[1:]
             kind = clean.get("kind") or "complaint"
-            triage = self.run_triage(kind, messages, tid)
-            created = (base + timedelta(minutes=17 * i)).isoformat(timespec="seconds")
+            extra_meta = {
+                "images_count": imgs if "images_count" in clean else None,
+                "reported_nick": clean.get("reported_nick"),
+                "rule_refs_raw": clean.get("rule_refs_raw"),
+                "region": clean.get("region"),
+            }
+            triage = self.run_triage(kind, messages, tid, extra_meta=extra_meta)
+            created = clean.get("created_at") or (base + timedelta(minutes=17 * i)).isoformat(timespec="seconds")
             ticket = {
                 "id": tid, "kind": kind, "created_at": created, "updated_at": created,
                 "messages": messages, "triage": triage, "status": "new", "assignee": None,
                 "created_by": None, "draft": triage["draft_response"], "escalation": None,
                 "junior_response": None, "review": None,
+                "extra_meta": extra_meta,
+                "read_by": [],
                 "is_synthetic_demo": bool(raw.get("is_synthetic_demo")),
             }
             self.tickets[tid] = ticket
@@ -231,7 +308,13 @@ class WorkspaceStore:
                 reason = triage.get("needs_human_reason") or "Спорный случай, требуется решение старшего"
                 ticket["status"] = "escalated"
                 ticket["junior_response"] = ticket["draft"]
-                ticket["escalation"] = {"reason": reason, "by": "junior_1", "by_name": DEMO_USERS["junior_1"]["name"], "at": created}
+                ticket["escalation"] = {
+                    "reason": reason,
+                    "by": "junior_1",
+                    "by_name": DEMO_USERS["junior_1"]["name"],
+                    "at": created,
+                    "seen_by": [],
+                }
                 self._log(DEMO_USERS["junior_1"], "escalate", tid, {"reason": reason})
             elif slot == 5:
                 self._seed_assign(ticket, "junior_2")
@@ -240,6 +323,8 @@ class WorkspaceStore:
     def _seed_assign(self, ticket: Dict[str, Any], user_id: str) -> None:
         ticket["assignee"] = user_id
         ticket["status"] = "in_progress"
+        if user_id not in ticket.setdefault("read_by", []):
+            ticket["read_by"].append(user_id)
         self._log(DEMO_USERS[user_id], "take", ticket["id"], {})
 
     # ---------- audit ----------
@@ -352,10 +437,17 @@ class WorkspaceStore:
             raise _forbidden(reason)
 
     # ---------- views ----------
-    def summary(self, t: Dict[str, Any]) -> Dict[str, Any]:
+    def summary(self, t: Dict[str, Any], user: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         tr = t.get("triage", {})
         assignee = DEMO_USERS.get(t.get("assignee") or "")
         text = _player_text(t)
+        prio = tr.get("priority")
+        read_by = t.get("read_by") or []
+        unread = (user["id"] not in read_by) if user else False
+        esc = t.get("escalation") if isinstance(t.get("escalation"), dict) else None
+        escalation_unseen = bool(
+            t["status"] == "escalated" and esc and user and user["id"] not in (esc.get("seen_by") or [])
+        )
         return {
             "id": t["id"],
             "created_at": t["created_at"],
@@ -363,7 +455,8 @@ class WorkspaceStore:
             "kind": t["kind"],
             "category": tr.get("category"),
             "category_name": tr.get("category_name"),
-            "priority": tr.get("priority"),
+            "priority": prio,
+            "is_urgent": prio in URGENT_PRIORITIES,
             "language": tr.get("language"),
             "status": t["status"],
             "status_label": STATUSES.get(t["status"], t["status"]),
@@ -371,6 +464,8 @@ class WorkspaceStore:
             "assignee_name": assignee["name"] if assignee else None,
             "needs_human": bool(tr.get("needs_human")),
             "escalated": t["status"] == "escalated" or t.get("escalation") is not None,
+            "escalation_unseen": escalation_unseen,
+            "unread": unread,
             "confidence": tr.get("confidence"),
             "is_spam": tr.get("is_spam"),
             "is_duplicate": tr.get("is_duplicate"),
@@ -386,7 +481,7 @@ class WorkspaceStore:
             else:
                 denied[a] = reason
         out = dict(t)
-        out.update(self.summary(t))
+        out.update(self.summary(t, user))
         out["allowed_actions"] = allowed
         out["denied_actions"] = denied
         out["history"] = [e for e in self.audit if e["ticket_id"] == t["id"]]
@@ -446,6 +541,18 @@ class AssistantSaveBody(BaseModel):
 class SettingsBody(BaseModel):
     junior_can_view_unassigned: Optional[bool] = None
     junior_can_send_without_review: Optional[bool] = None
+
+
+class CreateTicketBody(BaseModel):
+    text: str = Field(..., min_length=2, description="Текст обращения игрока")
+    kind: str = Field("complaint", description="complaint | report")
+    attachments: int = Field(0, ge=0, le=50)
+    reported_nick: Optional[str] = None
+    region: Optional[str] = None
+
+
+class ReadStateBody(BaseModel):
+    unread: bool = False
 
 
 # ====================== Router ======================
@@ -528,6 +635,8 @@ def create_router(store: WorkspaceStore) -> APIRouter:
         language: Optional[str] = None,
         assignee: Optional[str] = Query(None, description="id пользователя или 'none'"),
         escalated: Optional[bool] = None,
+        unread: Optional[bool] = Query(None, description="Фильтр непрочитанных репортов"),
+        urgent: Optional[bool] = Query(None, description="Фильтр срочных обращений (p0/p1)"),
         q: Optional[str] = None,
         sort: str = Query("created_at", description="created_at | priority | category | status | language | id | assignee"),
         order: str = Query("desc", description="asc | desc"),
@@ -543,7 +652,7 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                 items = [t for t in items if t.get("assignee") is None and t["status"] in ("new", "returned")]
             elif scope == "escalations":
                 items = [t for t in items if t["status"] == "escalated"]
-            rows = [store.summary(t) for t in items]
+            rows = [store.summary(t, user) for t in items]
 
         def f(rows, key, val):
             return [r for r in rows if r.get(key) == val] if val else rows
@@ -558,6 +667,10 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             rows = [r for r in rows if r["assignee"] == assignee]
         if escalated is not None:
             rows = [r for r in rows if r["escalated"] == escalated]
+        if unread is not None:
+            rows = [r for r in rows if bool(r.get("unread")) == unread]
+        if urgent is not None:
+            rows = [r for r in rows if bool(r.get("is_urgent")) == urgent]
         if q:
             ql = q.lower().strip()
             rows = [r for r in rows if ql in r["id"].lower() or ql in (r["snippet"] or "").lower()
@@ -574,12 +687,91 @@ def create_router(store: WorkspaceStore) -> APIRouter:
         rows.sort(key=keyfn, reverse=(order != "asc"))
         return {"count": len(rows), "tickets": rows}
 
+    @router.post("/tickets", summary="Поступление нового репорта (с автоматическим ИИ-триажем)")
+    async def create_ticket(body: CreateTicketBody, user=Depends(get_current_user)):
+        text = (body.text or "").strip()
+        if len(text) < 2:
+            raise _bad_request("Введите текст обращения игрока (минимум 2 символа)")
+        with store.lock:
+            tid = f"tkt_{uuid.uuid4().hex[:6]}"
+            messages = [{"role": "player", "text": text, "attachments": body.attachments}]
+            extra_meta = {
+                "images_count": body.attachments,
+                "reported_nick": (body.reported_nick or "").strip() or None,
+                "region": (body.region or "").strip() or None,
+            }
+            triage = store.run_triage(body.kind, messages, tid, extra_meta=extra_meta)
+            now = _now()
+            t = {
+                "id": tid,
+                "kind": body.kind or "complaint",
+                "created_at": now,
+                "updated_at": now,
+                "messages": messages,
+                "triage": triage,
+                "status": "new",
+                "assignee": None,
+                "created_by": None,
+                "draft": triage["draft_response"],
+                "escalation": None,
+                "junior_response": None,
+                "review": None,
+                "extra_meta": extra_meta,
+                "read_by": [],
+                "is_synthetic_demo": False,
+            }
+            store.tickets[tid] = t
+            store._log(None, "ticket_created", tid, {
+                "category": triage.get("category"),
+                "priority": triage.get("priority"),
+                "language": triage.get("language"),
+                "rule_ids": triage.get("rule_ids", []),
+                "needs_human": triage.get("needs_human"),
+            })
+            store._save()
+            return store.detail(user, t)
+
     @router.get("/tickets/{ticket_id}", summary="Карточка тикета с доступными действиями")
     async def get_ticket(ticket_id: str, user=Depends(get_current_user)):
         with store.lock:
             t = store.get(ticket_id)
             if not store.can_view(user, t):
                 raise _forbidden("Нет доступа к этому обращению")
+            changed = False
+            read_by = t.setdefault("read_by", [])
+            if user["id"] not in read_by:
+                read_by.append(user["id"])
+                changed = True
+            if user["role"] == SENIOR and isinstance(t.get("escalation"), dict):
+                seen_by = t["escalation"].setdefault("seen_by", [])
+                if user["id"] not in seen_by:
+                    seen_by.append(user["id"])
+                    changed = True
+            already_viewed = any(
+                e["ticket_id"] == ticket_id and e["actor_id"] == user["id"] and e["action"] == "view_ticket"
+                for e in store.audit
+            )
+            if not already_viewed:
+                store._log(user, "view_ticket", ticket_id, {"role": user["role"]})
+                changed = True
+            if changed:
+                store._save()
+            return store.detail(user, t)
+
+    @router.post("/tickets/{ticket_id}/read", summary="Отметить репорт прочитанным или непрочитанным")
+    async def mark_read(ticket_id: str, body: ReadStateBody, user=Depends(get_current_user)):
+        with store.lock:
+            t = store.get(ticket_id)
+            if not store.can_view(user, t):
+                raise _forbidden("Нет доступа к этому обращению")
+            read_by = t.setdefault("read_by", [])
+            if body.unread:
+                if user["id"] in read_by:
+                    read_by.remove(user["id"])
+            else:
+                if user["id"] not in read_by:
+                    read_by.append(user["id"])
+            store._save()
             return store.detail(user, t)
 
     @router.get("/tickets/{ticket_id}/history", summary="История изменений тикета")
@@ -597,6 +789,9 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             store.require(user, t, "take")
             t["assignee"] = user["id"]
             t["status"] = "in_progress"
+            read_by = t.setdefault("read_by", [])
+            if user["id"] not in read_by:
+                read_by.append(user["id"])
             store.touch(t)
             store._log(user, "take", ticket_id, {})
             store._save()
@@ -614,6 +809,9 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             t["assignee"] = target["id"]
             if t["status"] == "new":
                 t["status"] = "in_progress"
+            read_by = t.setdefault("read_by", [])
+            if target["id"] in read_by and target["id"] != user["id"]:
+                read_by.remove(target["id"])
             store.touch(t)
             store._log(user, "assign", ticket_id, {"from": prev, "to": target["id"], "to_name": target["name"]})
             store._save()
@@ -624,7 +822,7 @@ def create_router(store: WorkspaceStore) -> APIRouter:
         with store.lock:
             t = store.get(ticket_id)
             store.require(user, t, "retriage")
-            t["triage"] = store.run_triage(t["kind"], t["messages"], ticket_id)
+            t["triage"] = store.run_triage(t["kind"], t["messages"], ticket_id, extra_meta=t.get("extra_meta"))
             t["draft"] = t["triage"]["draft_response"]
             store.touch(t)
             store._log(user, "retriage", ticket_id, {
@@ -683,7 +881,18 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             store.require(user, t, "escalate")
             t["status"] = "escalated"
             t["junior_response"] = t.get("draft")
-            t["escalation"] = {"reason": body.reason.strip(), "by": user["id"], "by_name": user["name"], "at": _now()}
+            t["escalation"] = {
+                "reason": body.reason.strip(),
+                "by": user["id"],
+                "by_name": user["name"],
+                "at": _now(),
+                "seen_by": [],
+            }
+            # Mark as unread for senior admins so it surfaces in unread & escalation notifications
+            read_by = t.setdefault("read_by", [])
+            for uid, u in DEMO_USERS.items():
+                if u["role"] == SENIOR and uid in read_by:
+                    read_by.remove(uid)
             store.touch(t)
             store._log(user, "escalate", ticket_id, {"reason": body.reason.strip()})
             store._save()
@@ -702,12 +911,27 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                 "needs_human": tr.get("needs_human"), "confidence": tr.get("confidence"),
                 "rule_ids": tr.get("rule_ids", []),
             }
+            if isinstance(t.get("escalation"), dict):
+                seen_by = t["escalation"].setdefault("seen_by", [])
+                if user["id"] not in seen_by:
+                    seen_by.append(user["id"])
 
             if body.action == "return":
                 if not body.comment or len(body.comment.strip()) < 5:
                     raise _bad_request("Укажите комментарий для исполнителя (минимум 5 символов)")
                 t["status"] = "returned"
-                t["review"] = {"action": "return", "comment": body.comment.strip(), "by": user["id"], "by_name": user["name"], "at": _now()}
+                t["review"] = {
+                    "action": "return",
+                    "comment": body.comment.strip(),
+                    "by": user["id"],
+                    "by_name": user["name"],
+                    "at": _now(),
+                    "seen_by": [],
+                }
+                # Mark unread for the junior assignee when returned
+                read_by = t.setdefault("read_by", [])
+                if t.get("assignee") in read_by:
+                    read_by.remove(t["assignee"])
                 store._log(user, "return", ticket_id, {"comment": body.comment.strip(), "to": t.get("assignee")})
 
             elif body.action == "close":
@@ -773,7 +997,7 @@ def create_router(store: WorkspaceStore) -> APIRouter:
     async def assistant_analyze(body: AssistantAnalyzeBody, user=Depends(get_current_user)):
         with store.lock:
             kind, messages, tid, t = _assistant_input(body, user)
-            triage = store.run_triage(kind, messages, tid)
+            triage = store.run_triage(kind, messages, tid, extra_meta=(t or {}).get("extra_meta"))
             text = "\n".join(m.get("text", "") for m in messages if m.get("role", "player") == "player")
             similar = store.find_similar(text, exclude_id=tid)
         return {
@@ -792,7 +1016,7 @@ def create_router(store: WorkspaceStore) -> APIRouter:
             if body.ticket_id:
                 t = store.get(body.ticket_id)
                 store.require(user, t, "save_draft")
-                t["triage"] = store.run_triage(t["kind"], t["messages"], t["id"])
+                t["triage"] = store.run_triage(t["kind"], t["messages"], t["id"], extra_meta=t.get("extra_meta"))
                 t["draft"] = body.draft
                 store.touch(t)
                 store._log(user, "assistant_saved", t["id"], {"mode": "update_existing", "rule_ids": t["triage"]["rule_ids"]})
@@ -808,7 +1032,10 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                     "id": tid, "kind": body.kind, "created_at": now, "updated_at": now,
                     "messages": messages, "triage": triage, "status": "in_progress",
                     "assignee": user["id"], "created_by": user["id"], "draft": body.draft,
-                    "escalation": None, "junior_response": None, "review": None, "is_synthetic_demo": False,
+                    "escalation": None, "junior_response": None, "review": None,
+                    "extra_meta": {"images_count": body.attachments},
+                    "read_by": [user["id"]],
+                    "is_synthetic_demo": False,
                 }
                 store.tickets[tid] = t
                 store._log(user, "assistant_saved", tid, {"mode": "new_ticket", "rule_ids": triage["rule_ids"]})
@@ -830,13 +1057,54 @@ def create_router(store: WorkspaceStore) -> APIRouter:
                 p = t["triage"].get("priority")
                 by_priority[p] = by_priority.get(p, 0) + 1
             open_items = [t for t in visible if t["status"] not in FINAL_STATUSES]
+            unread_count = sum(1 for t in visible if user["id"] not in (t.get("read_by") or []))
+            urgent_open_count = sum(1 for t in open_items if t["triage"].get("priority") in URGENT_PRIORITIES)
+
+            notifications: List[Dict[str, Any]] = []
+            new_escalations_count = 0
+            for t in visible:
+                esc = t.get("escalation") if isinstance(t.get("escalation"), dict) else None
+                if t["status"] == "escalated" and esc:
+                    unseen = user["id"] not in (esc.get("seen_by") or [])
+                    if unseen:
+                        new_escalations_count += 1
+                    if user["role"] == SENIOR:
+                        notifications.append({
+                            "type": "escalation",
+                            "ticket_id": t["id"],
+                            "priority": t["triage"].get("priority"),
+                            "category_name": t["triage"].get("category_name"),
+                            "reason": esc.get("reason"),
+                            "by_name": esc.get("by_name"),
+                            "at": esc.get("at") or t["updated_at"],
+                            "unseen": unseen,
+                        })
+                elif user["role"] == JUNIOR and t["status"] == "returned" and t.get("assignee") == user["id"]:
+                    rev = t.get("review") or {}
+                    unseen = user["id"] not in (t.get("read_by") or [])
+                    notifications.append({
+                        "type": "returned",
+                        "ticket_id": t["id"],
+                        "priority": t["triage"].get("priority"),
+                        "category_name": t["triage"].get("category_name"),
+                        "reason": rev.get("comment") or "Возвращено старшим на доработку",
+                        "by_name": rev.get("by_name") or "Старший администратор",
+                        "at": rev.get("at") or t["updated_at"],
+                        "unseen": unseen,
+                    })
+            notifications.sort(key=lambda x: (not x["unseen"], x.get("at") or ""), reverse=False)
+
             result = {
                 "visible_total": len(visible),
                 "my_open": sum(1 for t in open_items if t.get("assignee") == user["id"]),
                 "queue_unassigned": sum(1 for t in visible if t.get("assignee") is None and t["status"] in ("new", "returned")),
                 "escalations_open": sum(1 for t in visible if t["status"] == "escalated"),
-                "critical_open": sum(1 for t in open_items if t["triage"].get("priority") == "critical"),
+                "new_escalations_count": new_escalations_count,
+                "unread_count": unread_count,
+                "urgent_open_count": urgent_open_count,
+                "critical_open": sum(1 for t in open_items if t["triage"].get("priority") in ("p0", "critical")),
                 "needs_human_open": sum(1 for t in open_items if t["triage"].get("needs_human")),
+                "notifications": notifications[:15],
                 "by_status": by_status,
                 "by_category": by_category,
                 "by_priority": by_priority,

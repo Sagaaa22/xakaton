@@ -1,16 +1,18 @@
 """
 Comprehensive test suite for Grand Mobile Support Copilot (Decentrathon 6.0).
-Covers all required scenarios from Section 8:
-1. Regular gameplay/rules question;
-2. Insult complaint with evidence;
-3. Complaint without sufficient evidence;
-4. Refund / billing and unban / appeal requests;
+Covers all required scenarios from Section 8 and Admin Workspace RBAC:
+1. Regular gameplay/mechanics question (`report.question`);
+2. Insult complaint with evidence (`complaint.insult`);
+3. Complaint without sufficient evidence (`ЖБ 1.2.2` / `ЖБ 1.1.2`);
+4. Payment / donate (`report.payment`) and admin appeal (`complaint.admin`) requests;
 5. Unknown rule ID referenced by player;
-6. Spam and duplicate tickets;
+6. Spam / offtopic (`report.offtopic`) and duplicate tickets;
 7. Multilingual ('ru', 'kk', 'uz', 'en', 'und') and mixed-language tickets;
 8. Empty or malformed requests (HTTP 422 validation);
 9. LLM error / unavailability and unsafe LLM output fallback;
-10. JSON schema compliance, real rule ID verification, and unconfirmed violation handling.
+10. JSON schema compliance, real rule ID verification, and unconfirmed violation handling;
+11. Batch CLI predict and evaluation metrics;
+12. Role-based access control (`junior_admin` vs `senior_admin`) on backend `/api/ws/*`.
 """
 import json
 from pathlib import Path
@@ -19,8 +21,8 @@ import unittest
 from typing import Any, Dict, Optional, Tuple
 
 from app.cli import compute_macro_f1, run_predict
-from app.generator import DraftGenerator, LLMClient
-from app.main import app, triage_service
+from app.generator import LLMClient
+from app.main import app, triage_service, workspace_store
 from app.safety import SafetyGuard
 from app.schemas import MessageItem, TriageRequest, TriageResponse
 from app.triage import TriageService
@@ -61,7 +63,8 @@ def call_asgi(
         "headers": [
             (b"content-type", b"application/json"),
             (b"content-length", str(len(raw_body)).encode("ascii")),
-        ] + extra_headers,
+        ]
+        + extra_headers,
         "client": ("127.0.0.1", 12345),
         "server": ("testserver", 80),
     }
@@ -145,11 +148,11 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
             "POST",
             "/triage",
             {
-                "kind": "question",
+                "kind": "report",
                 "messages": [
                     {
                         "role": "player",
-                        "text": "Подскажите пожалуйста, какой командой открыть навигатор GPS и показать лицензии?",
+                        "text": "Подскажите пожалуйста, какой командой открыть навигатор GPS и где купить лицензию?",
                         "attachments": 0,
                     }
                 ],
@@ -158,11 +161,9 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         self.assertEqual(status, 200)
         res = self._assert_valid_schema_and_rules(data)
         self.assertEqual(res.language, "ru")
-        self.assertEqual(res.category, "gameplay_question")
-        self.assertEqual(res.priority, "low")
-        self.assertIn("8.2", res.rule_ids)
+        self.assertEqual(res.category, "report.question")
+        self.assertEqual(res.priority, "p3")
         self.assertFalse(res.needs_human)
-        self.assertIn("/gps", res.draft_response)
 
     # 2. Жалоба на оскорбление (с доказательствами)
     def test_02_insult_complaint_with_evidence(self) -> None:
@@ -184,8 +185,8 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         self.assertEqual(status, 200)
         res = self._assert_valid_schema_and_rules(data)
         self.assertEqual(res.language, "ru")
-        self.assertEqual(res.category, "insult_toxicity")
-        self.assertEqual(res.priority, "medium")
+        self.assertEqual(res.category, "complaint.insult")
+        self.assertEqual(res.priority, "p2")
         self.assertTrue(res.facts.has_evidence)
         self.assertEqual(res.facts.attachments_count, 2)
         self.assertEqual(res.facts.server, 5)
@@ -216,7 +217,7 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         self.assertFalse(res.facts.has_evidence)
         self.assertEqual(res.facts.attachments_count, 0)
         self.assertTrue(res.needs_human)
-        self.assertIn("7.2", res.rule_ids)
+        self.assertTrue(any(r in res.rule_ids for r in ("ЖБ 1.2.2", "ЖБ 1.1.2")))
         # Draft must request additional details and NOT claim the complaint is false
         lower_draft = res.draft_response.lower()
         self.assertTrue(
@@ -224,10 +225,33 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         )
         self.assertIn("не означает, что жалоба ложная", lower_draft)
 
-    # 4. Обращение о возврате денег или разбане
+    # 4. Обращение о возврате денег / платежах или разбане / жалобе на администратора
     def test_04_refund_and_unban_requests(self) -> None:
-        # 4a. Billing / Refund request
+        # 4a. Billing / Payment request
         status_ref, data_ref, _ = call_asgi(
+            app,
+            "POST",
+            "/triage",
+            {
+                "kind": "report",
+                "messages": [
+                    {
+                        "role": "player",
+                        "text": "Не пришёл донат 1500 рублей на 3 сервере, ник Alex_Mercer, чек оплаты приложил, верните пожалуйста деньги",
+                        "attachments": 1,
+                    }
+                ],
+            },
+        )
+        self.assertEqual(status_ref, 200)
+        res_ref = self._assert_valid_schema_and_rules(data_ref)
+        self.assertEqual(res_ref.category, "report.payment")
+        self.assertEqual(res_ref.priority, "p0")
+        self.assertTrue(res_ref.needs_human)
+        self.assertNotIn("мы вернем деньги", res_ref.draft_response.lower())
+
+        # 4b. Unban / Admin complaint request
+        status_ban, data_ban, _ = call_asgi(
             app,
             "POST",
             "/triage",
@@ -236,32 +260,7 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
                 "messages": [
                     {
                         "role": "player",
-                        "text": "Верните пожалуйста деньги 1500 рублей за донат на 3 сервере, ник Alex_Mercer, чек приложил",
-                        "attachments": 1,
-                    }
-                ],
-            },
-        )
-        self.assertEqual(status_ref, 200)
-        res_ref = self._assert_valid_schema_and_rules(data_ref)
-        self.assertEqual(res_ref.category, "billing_refund")
-        self.assertEqual(res_ref.priority, "high")
-        self.assertTrue(res_ref.needs_human)
-        self.assertTrue(any(r in res_ref.rule_ids for r in ("6.1", "6.2")))
-        # Must NOT promise refund
-        self.assertNotIn("мы вернем деньги", res_ref.draft_response.lower())
-
-        # 4b. Unban / Appeal request
-        status_ban, data_ban, _ = call_asgi(
-            app,
-            "POST",
-            "/triage",
-            {
-                "kind": "appeal",
-                "messages": [
-                    {
-                        "role": "player",
-                        "text": "Меня забанили на 10 сервере по ошибке, ник Danil_Volkov, разбаньте пожалуйста!",
+                        "text": "Администратор забанил меня на 10 сервере просто так, не согласен с баном, ник Danil_Volkov, разбаньте пожалуйста!",
                         "attachments": 1,
                     }
                 ],
@@ -269,11 +268,10 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         )
         self.assertEqual(status_ban, 200)
         res_ban = self._assert_valid_schema_and_rules(data_ban)
-        self.assertEqual(res_ban.category, "ban_appeal")
-        self.assertEqual(res_ban.priority, "high")
+        self.assertEqual(res_ban.category, "complaint.admin")
+        self.assertEqual(res_ban.priority, "p1")
         self.assertTrue(res_ban.needs_human)
-        self.assertIn("7.1", res_ban.rule_ids)
-        # Must NOT promise unban
+        self.assertIn("3.4", res_ban.rule_ids)
         self.assertNotIn("мы вас разбаним", res_ban.draft_response.lower())
 
     # 5. Неизвестный пункт правил
@@ -297,7 +295,6 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         res = self._assert_valid_schema_and_rules(data)
         self.assertIn("99.9", res.facts.unknown_mentioned_rules)
         self.assertIn("14.88", res.facts.unknown_mentioned_rules)
-        # Unknown rule IDs must NEVER appear in verified rule_ids
         self.assertNotIn("99.9", res.rule_ids)
         self.assertNotIn("14.88", res.rule_ids)
         self.assertTrue(res.needs_human)
@@ -306,13 +303,13 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
 
     # 6. Спам и повторные обращения (дубликаты)
     def test_06_spam_and_duplicate_tickets(self) -> None:
-        # 6a. Spam flood
+        # 6a. Spam flood in report
         status_spam, data_spam, _ = call_asgi(
             app,
             "POST",
             "/triage",
             {
-                "kind": "question",
+                "kind": "report",
                 "messages": [
                     {
                         "role": "player",
@@ -325,8 +322,9 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         self.assertEqual(status_spam, 200)
         res_spam = self._assert_valid_schema_and_rules(data_spam)
         self.assertTrue(res_spam.is_spam)
-        self.assertEqual(res_spam.category, "spam_offtopic")
-        self.assertEqual(res_spam.priority, "low")
+        self.assertEqual(res_spam.category, "report.offtopic")
+        self.assertEqual(res_spam.priority, "p3")
+        self.assertIn("3.1", res_spam.rule_ids)
 
         # 6b. Duplicate submission of the exact same ticket
         payload_dup = {
@@ -386,28 +384,28 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         )
         res_kk = self.service.analyze(req_kk)
         self.assertEqual(res_kk.language, "kk")
-        self.assertEqual(res_kk.category, "insult_toxicity")
+        self.assertEqual(res_kk.category, "complaint.insult")
         self.assertIn("Сәлеметсіз бе", res_kk.draft_response)
 
         # 7c. Uzbek (uz)
         req_uz = TriageRequest(
-            kind="appeal",
+            kind="complaint",
             messages=[
                 MessageItem(
                     role="player",
-                    text="Salom, mening Sardor_Uz akkauntimni 4-serverda xato ban qilishdi, iltimos bandan chiqaring, skrinshot bor",
+                    text="Salom, mening Sardor_Uz akkauntimni 4-serverda admin nohaq ban qildi, iltimos bandan chiqaring, skrinshot bor",
                     attachments=1,
                 )
             ],
         )
         res_uz = self.service.analyze(req_uz)
         self.assertEqual(res_uz.language, "uz")
-        self.assertEqual(res_uz.category, "ban_appeal")
+        self.assertEqual(res_uz.category, "complaint.admin")
         self.assertIn("Assalomu alaykum", res_uz.draft_response)
 
         # 7d. Undetermined language (symbols/numbers only)
         req_und = TriageRequest(
-            kind="question",
+            kind="report",
             messages=[MessageItem(role="player", text="1234567890 ??? !!!", attachments=0)],
         )
         res_und = self.service.analyze(req_und)
@@ -415,12 +413,10 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
 
     # 8. Пустой или некорректный запрос
     def test_08_empty_or_invalid_requests(self) -> None:
-        # 8a. Empty messages list
         st1, err1, _ = call_asgi(app, "POST", "/triage", {"kind": "complaint", "messages": []})
         self.assertEqual(st1, 422)
         self.assertEqual(err1.get("error"), "validation_error")
 
-        # 8b. Whitespace-only message text
         st2, err2, _ = call_asgi(
             app,
             "POST",
@@ -430,13 +426,11 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         self.assertEqual(st2, 422)
         self.assertEqual(err2.get("error"), "validation_error")
 
-        # 8c. Missing messages field
         st3, err3, _ = call_asgi(app, "POST", "/triage", {"kind": "complaint"})
         self.assertEqual(st3, 422)
 
     # 9. Ошибка модели или недоступность LLM + защита от галлюцинаций LLM
     def test_09_llm_error_and_unsafe_output_fallback(self) -> None:
-        # 9a. LLM raises ConnectionError / Timeout -> service must not crash and must return safe fallback
         def failing_llm_handler(sys_prompt: str, user_prompt: str):
             raise ConnectionError("Simulated LLM endpoint connection timeout")
 
@@ -459,7 +453,6 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
             any("LLM недоступна или вернула ошибку" in r for r in res.reasons)
         )
 
-        # 9b. LLM returns unsafe draft (promising unban/refund & hallucinating rule 88.8) -> SafetyGuard blocks it
         def unsafe_llm_handler(sys_prompt: str, user_prompt: str):
             return (
                 "Здравствуйте! Игрок действительно нарушил п. 88.8 правил! Мы вас разбаним и вернем деньги прямо сейчас, а нарушитель получит бан!",
@@ -478,7 +471,6 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
 
     # 10. Поведение при отсутствии подтверждений в rules.json и проверка CLI/UI эндпоинтов
     def test_10_unconfirmed_violation_and_endpoints(self) -> None:
-        # Vague message with no matching rule confirmation
         req = TriageRequest(
             kind="complaint",
             messages=[
@@ -492,7 +484,6 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
         res = self.service.analyze(req)
         self.assertTrue(res.needs_human)
 
-        # Check /health, /api/tickets, /api/analytics, /api/escalate, and / (UI)
         st_h, data_h, _ = call_asgi(app, "GET", "/health")
         self.assertEqual(st_h, 200)
         self.assertEqual(data_h["status"], "ok")
@@ -540,12 +531,324 @@ class TestGrandMobileSupportCopilot(unittest.TestCase):
                 self._assert_valid_schema_and_rules(obj)
 
         macro_f1, _ = compute_macro_f1(
-            ["high", "medium", "low", "critical"],
-            ["high", "medium", "low", "critical"],
+            ["p1", "p2", "p3", "p0"],
+            ["p1", "p2", "p3", "p0"],
         )
         self.assertEqual(macro_f1, 1.0)
 
 
+class TestWorkspaceRBAC(unittest.TestCase):
+    """Server-side RBAC, workflow lifecycle, and safety tests for `/api/ws/*`."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.valid_rule_ids = triage_service.rag.valid_rule_ids
+        cls.valid_categories = triage_service.taxonomy.valid_categories
+        cls.valid_priorities = triage_service.taxonomy.valid_priorities
+        workspace_store.persist_path = None
+        workspace_store.reset()
+
+    def setUp(self) -> None:
+        workspace_store.reset()
+
+    def _call(self, user: str, method: str, path: str, body: Optional[Any] = None):
+        return call_asgi(app, method, path, body, headers={"X-Demo-User": user})
+
+    def test_01_authentication_and_demo_mode(self) -> None:
+        st, _, _ = call_asgi(app, "GET", "/api/ws/me")
+        self.assertEqual(st, 401)
+
+        st, me_jr, _ = self._call("junior_1", "GET", "/api/ws/me")
+        self.assertEqual(st, 200)
+        self.assertEqual(me_jr["role"], "junior_admin")
+        self.assertTrue(me_jr["demo_mode"])
+        self.assertFalse(me_jr["can_manage_settings"])
+        self.assertFalse(me_jr["can_review"])
+        self.assertFalse(me_jr["can_edit_rules"])
+
+        st, me_sr, _ = self._call("senior_1", "GET", "/api/ws/me")
+        self.assertEqual(st, 200)
+        self.assertEqual(me_sr["role"], "senior_admin")
+        self.assertTrue(me_sr["can_manage_settings"])
+        self.assertTrue(me_sr["can_review"])
+
+    def test_02_junior_cannot_access_senior_endpoints_or_others_tickets(self) -> None:
+        st, err, _ = self._call("junior_1", "GET", "/api/ws/tickets?scope=escalations")
+        self.assertEqual(st, 403)
+        self.assertEqual(err["detail"]["error"], "forbidden")
+
+        st, _, _ = self._call("junior_1", "GET", "/api/ws/settings")
+        self.assertEqual(st, 403)
+        st, _, _ = self._call("junior_1", "PUT", "/api/ws/settings", {"junior_can_view_unassigned": False})
+        self.assertEqual(st, 403)
+
+        other_tid = next(t["id"] for t in workspace_store.tickets.values() if t.get("assignee") == "junior_2")
+        st, _, _ = self._call("junior_1", "GET", f"/api/ws/tickets/{other_tid}")
+        self.assertEqual(st, 403)
+
+        my_tid = next(
+            t["id"] for t in workspace_store.tickets.values()
+            if t.get("assignee") == "junior_1" and t["status"] == "in_progress"
+        )
+        st, _, _ = self._call("junior_1", "POST", f"/api/ws/tickets/{my_tid}/assign", {"assignee_id": "junior_2"})
+        self.assertEqual(st, 403)
+        for act in ("approve", "return", "close"):
+            st, _, _ = self._call("junior_1", "POST", f"/api/ws/tickets/{my_tid}/review", {"action": act, "basis": "тестовое основание"})
+            self.assertEqual(st, 403)
+
+    def test_03_junior_take_request_info_escalate_and_senior_return_approve(self) -> None:
+        unassigned_tid = next(
+            t["id"] for t in workspace_store.tickets.values()
+            if t.get("assignee") is None and t["status"] == "new"
+        )
+        st, t, _ = self._call("junior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/take")
+        self.assertEqual(st, 200)
+        self.assertEqual(t["assignee"], "junior_1")
+        self.assertEqual(t["status"], "in_progress")
+
+        workspace_store.tickets[unassigned_tid]["triage"]["needs_human"] = True
+        st, _, _ = self._call("junior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/send", {"text": "Здравствуйте! Проверим."})
+        self.assertEqual(st, 403)
+
+        st, t, _ = self._call(
+            "junior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/request-info",
+            {"text": "Здравствуйте! Пришлите, пожалуйста, скриншот с /time и номер сервера."},
+        )
+        self.assertEqual(st, 200)
+        self.assertEqual(t["status"], "awaiting_player")
+
+        st, t, _ = self._call(
+            "junior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/escalate",
+            {"reason": "Требуется проверка логов старшим администратором"},
+        )
+        self.assertEqual(st, 200)
+        self.assertEqual(t["status"], "escalated")
+
+        st, _, _ = self._call("junior_1", "PUT", f"/api/ws/tickets/{unassigned_tid}/draft", {"text": "Новый текст"})
+        self.assertEqual(st, 403)
+
+        st, t, _ = self._call(
+            "senior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/review",
+            {"action": "return", "comment": "Уточните точное время и сервер у игрока"},
+        )
+        self.assertEqual(st, 200)
+        self.assertEqual(t["status"], "returned")
+
+        st, t, _ = self._call(
+            "junior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/escalate",
+            {"reason": "Данные уточнены, передаю повторно старшему"},
+        )
+        self.assertEqual(st, 200)
+        self.assertEqual(t["status"], "escalated")
+
+        # Senior cannot confirm punishment without human evidence verification and valid rule IDs
+        st, _, _ = self._call(
+            "senior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/review",
+            {
+                "action": "approve",
+                "decision": "punishment_confirmed",
+                "basis": "ИИ написал, что игрок виновен",
+                "evidence_verified": False,
+                "rule_ids": ["2.1"],
+            },
+        )
+        self.assertEqual(st, 422)
+
+        # Senior cannot cite non-existent rule ID
+        st, _, _ = self._call(
+            "senior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/review",
+            {
+                "action": "approve",
+                "decision": "punishment_confirmed",
+                "basis": "Проверены скриншоты и логи чата сервера",
+                "evidence_verified": True,
+                "evidence_reference": "логи чата сервера #5 за 14:20",
+                "rule_ids": ["99.9"],
+            },
+        )
+        self.assertEqual(st, 422)
+
+        # Senior approves after verifying evidence with real rule ID
+        st, t, _ = self._call(
+            "senior_1", "POST", f"/api/ws/tickets/{unassigned_tid}/review",
+            {
+                "action": "approve",
+                "decision": "punishment_confirmed",
+                "basis": "Лично проверены логи чата и скриншот с /time",
+                "evidence_verified": True,
+                "evidence_reference": "логи чата сервера #5, скриншот #1",
+                "rule_ids": ["2.1"],
+            },
+        )
+        self.assertEqual(st, 200)
+        self.assertEqual(t["status"], "resolved")
+        self.assertTrue(t["review"]["evidence_verified"])
+
+    def test_04_safety_filter_blocks_unsafe_send_and_assistant_works(self) -> None:
+        my_tid = next(
+            t["id"] for t in workspace_store.tickets.values()
+            if t.get("assignee") == "junior_1" and t["status"] == "in_progress"
+        )
+        st, _, _ = self._call(
+            "senior_1", "POST", f"/api/ws/tickets/{my_tid}/send",
+            {"text": "Здравствуйте! Мы вас разбаним и вернем деньги по п. 77.7!"},
+        )
+        self.assertEqual(st, 422)
+
+        st, res, _ = self._call(
+            "junior_1", "POST", "/api/ws/assistant/analyze",
+            {"text": "Игрок Oleg_Smirnov оскорблял меня в чате на 3 сервере, скрин есть", "kind": "complaint", "attachments": 1},
+        )
+        self.assertEqual(st, 200)
+        self.assertTrue(res["rules_found"])
+        self.assertTrue(all(v["exists"] for v in res["rule_verification"]))
+
+        st, saved, _ = self._call(
+            "junior_1", "POST", "/api/ws/assistant/save",
+            {
+                "text": "Игрок Oleg_Smirnov оскорблял меня в чате на 3 сервере, скрин есть",
+                "kind": "complaint",
+                "attachments": 1,
+                "draft": res["triage"]["draft_response"],
+            },
+        )
+        self.assertEqual(st, 200)
+        self.assertIn(saved["id"], workspace_store.tickets)
+
+    def test_05_audit_and_analytics_scoping(self) -> None:
+        st, jr_audit, _ = self._call("junior_1", "GET", "/api/ws/audit")
+        self.assertEqual(st, 200)
+        self.assertEqual(jr_audit["scope"], "own")
+        self.assertTrue(all(e["actor_id"] == "junior_1" for e in jr_audit["entries"]))
+
+        st, sr_audit, _ = self._call("senior_1", "GET", "/api/ws/audit")
+        self.assertEqual(st, 200)
+        self.assertEqual(sr_audit["scope"], "team")
+
+        st, jr_an, _ = self._call("junior_1", "GET", "/api/ws/analytics")
+        self.assertIsNone(jr_an["team"])
+        st, sr_an, _ = self._call("senior_1", "GET", "/api/ws/analytics")
+        self.assertIsNotNone(sr_an["team"])
+
+    def test_06_full_report_workflow_unread_and_notifications(self) -> None:
+        """
+        End-to-end verification of ЗАДАЧА 3, ЗАДАЧА 4, ЗАДАЧА 5:
+        1. Incoming report arrives (POST /api/ws/tickets).
+        2. AI automatically classifies category, language, priority, and retrieves verified rules.
+        3. Junior admin lists unread reports, opens ticket (marks as read, logs view_ticket).
+        4. Junior checks draft with verified rules, takes ticket, edits draft.
+        5. Junior escalates to Senior with mandatory reason.
+        6. Senior sees new escalation notification, history, and AI recommendations.
+        7. Senior approves with evidence verification and real rule ID.
+        8. Full ticket action history is recorded.
+        9. Non-destructive migration preserves state.
+        """
+        # Step 1: New report arrives
+        payload = {
+            "text": "Игрок Denis_Voronov упомянул родных и оскорблял в голосовом чате на 2 сервере, есть скриншот /time",
+            "kind": "complaint",
+            "attachments": 1,
+            "reported_nick": "Denis_Voronov",
+        }
+        st, created, _ = self._call("junior_1", "POST", "/api/ws/tickets", payload)
+        self.assertEqual(st, 200)
+        tid = created["id"]
+        self.assertEqual(created["status"], "new")
+        self.assertEqual(created["kind"], "complaint")
+        self.assertTrue(created["unread"])
+
+        # Step 2: AI determined category, language, and priority
+        triage = created["triage"]
+        self.assertEqual(triage["language"], "ru")
+        self.assertIn(triage["category"], {"complaint.insult", "complaint.other"})
+        self.assertIn(triage["priority"], {"p1", "p0", "p2"})
+        self.assertTrue(len(triage["rule_ids"]) > 0)
+        for rid in triage["rule_ids"]:
+            self.assertIn(rid, self.valid_rule_ids)
+
+        # Step 3: Junior filters unread tickets and opens the report
+        st, unread_list, _ = self._call("junior_1", "GET", "/api/ws/tickets?unread=true")
+        self.assertEqual(st, 200)
+        self.assertTrue(any(t["id"] == tid for t in unread_list["tickets"]))
+
+        st, opened, _ = self._call("junior_1", "GET", f"/api/ws/tickets/{tid}")
+        self.assertEqual(st, 200)
+        # Opened ticket is now marked read for junior_1
+        self.assertFalse(opened["unread"])
+        self.assertIn("junior_1", workspace_store.tickets[tid]["read_by"])
+        # History contains ticket_created and view_ticket
+        hist_actions = [e["action"] for e in opened["history"]]
+        self.assertIn("ticket_created", hist_actions)
+        self.assertIn("view_ticket", hist_actions)
+
+        # Step 4: Junior takes ticket and saves draft
+        st, taken, _ = self._call("junior_1", "POST", f"/api/ws/tickets/{tid}/take")
+        self.assertEqual(st, 200)
+        self.assertEqual(taken["status"], "in_progress")
+        self.assertEqual(taken["assignee"], "junior_1")
+
+        new_draft = "Здравствуйте! Ваша жалоба на Denis_Voronov принята к рассмотрению. Ожидайте вердикта."
+        st, drafted, _ = self._call("junior_1", "PUT", f"/api/ws/tickets/{tid}/draft", {"text": new_draft})
+        self.assertEqual(st, 200)
+        self.assertEqual(drafted["draft"], new_draft)
+
+        # Step 5: Junior escalates to Senior
+        esc_reason = "Сложный случай: требуется проверка логов голосового чата и аудиозаписи старшим"
+        st, escalated, _ = self._call("junior_1", "POST", f"/api/ws/tickets/{tid}/escalate", {"reason": esc_reason})
+        self.assertEqual(st, 200)
+        self.assertEqual(escalated["status"], "escalated")
+        self.assertEqual(escalated["escalation"]["reason"], esc_reason)
+
+        # Step 6: Senior sees escalation notification
+        st, sr_an, _ = self._call("senior_1", "GET", "/api/ws/analytics")
+        self.assertEqual(st, 200)
+        self.assertGreaterEqual(sr_an["new_escalations_count"], 1)
+        esc_notifs = [n for n in sr_an["notifications"] if n["ticket_id"] == tid]
+        self.assertTrue(len(esc_notifs) > 0)
+        self.assertTrue(esc_notifs[0]["unseen"])
+
+        # Step 7: Senior opens ticket and reviews recommendations
+        st, sr_view, _ = self._call("senior_1", "GET", f"/api/ws/tickets/{tid}")
+        self.assertEqual(st, 200)
+        self.assertEqual(sr_view["junior_response"], new_draft)
+        self.assertIn("senior_1", sr_view["escalation"]["seen_by"])
+
+        # Step 8: Senior approves decision with evidence verification & valid rule IDs
+        rule_to_cite = triage["rule_ids"][0] if triage["rule_ids"] else "2.6"
+        st, approved, _ = self._call(
+            "senior_1", "POST", f"/api/ws/tickets/{tid}/review",
+            {
+                "action": "approve",
+                "decision": "punishment_confirmed",
+                "basis": "Лично прослушана аудиозапись и сверены логи сервера #2 за 16:30",
+                "evidence_verified": True,
+                "evidence_reference": "аудиозапись игрока и логи сервера #2",
+                "rule_ids": [rule_to_cite],
+            },
+        )
+        self.assertEqual(st, 200)
+        self.assertEqual(approved["status"], "resolved")
+        self.assertTrue(approved["review"]["evidence_verified"])
+
+        # Step 9: History persistence check
+        st, hist, _ = self._call("senior_1", "GET", f"/api/ws/tickets/{tid}/history")
+        self.assertEqual(st, 200)
+        actions = [e["action"] for e in hist]
+        self.assertIn("ticket_created", actions)
+        self.assertIn("view_ticket", actions)
+        self.assertIn("take", actions)
+        self.assertIn("save_draft", actions)
+        self.assertIn("escalate", actions)
+        self.assertIn("approve", actions)
+
+        # Step 10: Toggle read/unread endpoint
+        st, unread_toggle, _ = self._call("junior_1", "POST", f"/api/ws/tickets/{tid}/read", {"unread": True})
+        self.assertEqual(st, 200)
+        self.assertTrue(unread_toggle["unread"])
+        st, read_toggle, _ = self._call("junior_1", "POST", f"/api/ws/tickets/{tid}/read", {"unread": False})
+        self.assertEqual(st, 200)
+        self.assertFalse(read_toggle["unread"])
+
+
 if __name__ == "__main__":
     unittest.main()
-

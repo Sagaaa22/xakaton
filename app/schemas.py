@@ -4,8 +4,9 @@ from pydantic import BaseModel, Field, validator
 
 
 class MessageItem(BaseModel):
-    role: str = Field(default="player", description="Sender role: player, admin, support, etc.")
+    role: str = Field(default="player", description="Sender role: player, reported_player, admin, etc.")
     text: str = Field(..., description="Message text content")
+    ts: Optional[str] = Field(default=None, description="Message timestamp if available")
     attachments: Union[int, List[Any], bool, None] = Field(
         default=0, description="Number of attachments or list of attachments"
     )
@@ -37,8 +38,18 @@ class MessageItem(BaseModel):
 
 class TriageRequest(BaseModel):
     id: Optional[Union[str, int]] = Field(default=None, description="Optional ticket identifier")
-    ticket_id: Optional[Union[str, int]] = Field(default=None, description="Optional ticket ID alias")
-    kind: Optional[str] = Field(default="complaint", description="Ticket kind: complaint, question, appeal, bug")
+    ticket_id: Optional[Union[str, int]] = Field(default=None, description="Ticket ID from dataset")
+    kind: Optional[str] = Field(default="complaint", description="Ticket kind: complaint or report")
+    created_at: Optional[str] = Field(default=None, description="Creation timestamp")
+    region: Optional[str] = Field(default=None, description="Server region: cis, kz, uz, etc.")
+    server_lang: Optional[str] = Field(default=None, description="Server language: ru, kk, uz, etc.")
+    lang: Optional[str] = Field(default=None, description="Heuristic language hint from dataset")
+    reporter_hash: Optional[str] = Field(default=None, description="Anonymized reporter hash")
+    reported_hash: Optional[str] = Field(default=None, description="Anonymized reported player hash")
+    reported_nick: Optional[str] = Field(default=None, description="Reported player nickname")
+    rule_refs_raw: Optional[Union[str, List[str]]] = Field(default=None, description="Raw rule reference entered by player")
+    images_count: Optional[int] = Field(default=None, description="Number of attached screenshots")
+    status: Optional[Union[int, str]] = Field(default=None, description="Ticket status code")
     messages: List[MessageItem] = Field(..., description="Non-empty list of messages in the ticket")
     server: Optional[Union[int, str]] = Field(default=None, description="Optional game server ID/number")
     nickname: Optional[str] = Field(default=None, description="Optional player nickname")
@@ -66,10 +77,12 @@ class ExtractedFacts(BaseModel):
     mentioned_rules: List[str] = Field(default_factory=list)
     valid_mentioned_rules: List[str] = Field(default_factory=list)
     unknown_mentioned_rules: List[str] = Field(default_factory=list)
+    rule_refs_raw: Optional[str] = None
     has_evidence: bool = False
     attachments_count: int = 0
     evidence_types: List[str] = Field(default_factory=list)
     server: Optional[Union[int, str]] = None
+    region: Optional[str] = None
     amounts: List[str] = Field(default_factory=list)
     commands_mentioned: List[str] = Field(default_factory=list)
     is_mixed_language: bool = False
@@ -99,9 +112,9 @@ class CitedRule(BaseModel):
 class TriageResponse(BaseModel):
     ticket_id: Optional[str] = None
     language: str = Field(..., description="Detected language: ru, kk, uz, en, or und")
-    category: str = Field(..., description="Category ID strictly from taxonomy.json")
-    category_name: str = Field(default="", description="Human-readable category name")
-    priority: str = Field(..., description="Priority ID strictly from taxonomy.json")
+    category: str = Field(..., description="Category code strictly from taxonomy.json")
+    category_name: str = Field(default="", description="Human-readable category title")
+    priority: str = Field(..., description="Priority code strictly from taxonomy.json")
     is_spam: bool = False
     is_duplicate: bool = False
     facts: ExtractedFacts

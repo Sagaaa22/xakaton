@@ -3,6 +3,7 @@ End-to-end Triage Service orchestrating extraction, classification, RAG over rul
 safety verification, and privacy-preserving analytics.
 """
 import logging
+import math
 import time
 from typing import Any, Dict, List, Optional
 import uuid
@@ -90,6 +91,7 @@ class TriageService:
         language, facts = self.extractor.extract_facts(
             request=request,
             valid_rule_ids=self.rag.valid_rule_ids,
+            normalize_rule_fn=self.rag.normalize_rule_ref,
         )
         if facts.is_mixed_language:
             reasons.append(
@@ -114,51 +116,59 @@ class TriageService:
         reasons.extend(cls_reasons)
 
         # 4. RAG Retrieval over rules.json
+        cat_rule_ids = (
+            self.taxonomy.categories[category].related_rule_prefixes
+            if category in self.taxonomy.categories
+            else []
+        )
+        rag_query = f"{combined_player_text} {facts.rule_refs_raw or ''}".strip()
         cited_rules, _, unknown_rules, has_reliable_rule = self.rag.retrieve(
-            query_text=combined_player_text,
+            query_text=rag_query,
             category=category,
             mentioned_rule_ids=facts.mentioned_rules,
+            category_rule_ids=cat_rule_ids,
             top_k=3,
         )
 
-        # If complaint has insufficient evidence, include rule 7.2 (evidence policy) if present in rules.json
-        if (
-            not facts.has_evidence
-            and category in ("insult_toxicity", "rp_violation", "scam_fraud", "cheating_exploits")
-            and self.rag.is_valid_rule_id("7.2")
-        ):
-            already_has_72 = any(r.id == "7.2" for r in cited_rules)
-            if not already_has_72:
-                r72 = self.rag.rules_by_id["7.2"]
-                cited_rules.append(
-                    CitedRule(
-                        id="7.2",
-                        section=r72.section,
-                        title=r72.title,
-                        quote=r72.text,
-                        punishment=r72.punishment,
-                        relevance_score=0.65,
+        # If complaint has insufficient evidence, include complaint evidence rule ("ЖБ 1.2.2" or "ЖБ 1.1.2" or legacy "7.2")
+        complaint_cats = {
+            "complaint.insult", "complaint.dm", "complaint.scam", "complaint.cheat",
+            "complaint.rmt_ads", "complaint.invalid",
+            "insult_toxicity", "rp_violation", "scam_fraud", "cheating_exploits",
+        }
+        if not facts.has_evidence and category in complaint_cats:
+            for ev_rule_id in ("ЖБ 1.2.2", "ЖБ 1.1.2", "7.2"):
+                if self.rag.is_valid_rule_id(ev_rule_id) and not any(r.id == ev_rule_id for r in cited_rules):
+                    r_ev = self.rag.rules_by_id[ev_rule_id]
+                    cited_rules.append(
+                        CitedRule(
+                            id=ev_rule_id,
+                            section=r_ev.section,
+                            title=r_ev.title,
+                            quote=r_ev.text,
+                            punishment=r_ev.punishment,
+                            relevance_score=0.68,
+                        )
                     )
-                )
+                    break
 
-        # If spam or duplicate, include rule 7.3 (spam/duplicate policy) if present in rules.json
-        if (
-            (is_spam or is_duplicate or category == "spam_offtopic")
-            and self.rag.is_valid_rule_id("7.3")
-            and not any(r.id == "7.3" for r in cited_rules)
-        ):
-            r73 = self.rag.rules_by_id["7.3"]
-            cited_rules.insert(
-                0,
-                CitedRule(
-                    id="7.3",
-                    section=r73.section,
-                    title=r73.title,
-                    quote=r73.text,
-                    punishment=r73.punishment,
-                    relevance_score=0.85,
-                ),
-            )
+        # If spam, duplicate, or offtopic, include rule "3.1" (or legacy "7.3") if present in rules.json
+        if is_spam or is_duplicate or category in ("report.offtopic", "spam_offtopic"):
+            for sp_rule_id in ("3.1", "7.3"):
+                if self.rag.is_valid_rule_id(sp_rule_id) and not any(r.id == sp_rule_id for r in cited_rules):
+                    r_sp = self.rag.rules_by_id[sp_rule_id]
+                    cited_rules.insert(
+                        0,
+                        CitedRule(
+                            id=sp_rule_id,
+                            section=r_sp.section,
+                            title=r_sp.title,
+                            quote=r_sp.text,
+                            punishment=r_sp.punishment,
+                            relevance_score=0.85,
+                        ),
+                    )
+                    break
 
         # Strict verification that every cited rule ID exists in rules.json
         cited_rules = [r for r in cited_rules if self.rag.is_valid_rule_id(r.id)]
@@ -281,48 +291,76 @@ class TriageService:
                 f"Игрок указал неизвестный пункт правил ({', '.join(facts.unknown_mentioned_rules)}), отсутствующий в rules.json"
             )
 
-        if category == "ban_appeal":
-            escalation_reasons.append(
-                "Обжалование наказания и запрос на разбан рассматриваются только старшей администрацией (п. 7.1)"
-            )
-        elif category == "billing_refund":
-            escalation_reasons.append(
-                "Финансовые вопросы, донат и возврат средств требуют ручной проверки чека специалистом (п. 6.1, 6.2)"
-            )
-        elif category == "account_recovery":
-            escalation_reasons.append(
-                "Восстановление доступа или взлом аккаунта требует верификации регистрационных данных владельца (п. 1.2, 1.3)"
-            )
-        elif category == "cheating_exploits":
-            escalation_reasons.append(
-                "Подозрение на читы или багоюз требует проверки античит-логов и видеозаписи администратором (п. 5.1, 5.2)"
-            )
-        elif category == "scam_fraud":
-            escalation_reasons.append(
-                "Жалоба на NonRP обман/мошенничество требует сверки условий сделки и логов передач старшим администратором (п. 4.1)"
-            )
-        elif category in ("insult_toxicity", "rp_violation"):
-            if not facts.has_evidence:
+        # Check explicit `needs_human_always` from taxonomy.json
+        if category in self.taxonomy.needs_human_always:
+            if category in ("complaint.admin", "ban_appeal"):
                 escalation_reasons.append(
-                    "Жалоба на нарушение игрока без приложенных доказательств: требуется запрос материалов или проверка логов человеком (п. 7.2)"
+                    "Жалоба на администратора / обжалование наказания рассматривается только старшей администрацией (п. 3.4)"
+                )
+            elif category in ("report.payment", "billing_refund"):
+                escalation_reasons.append(
+                    "Платёж и донат требуют ручной сверки транзакции и чека профильным специалистом"
+                )
+            elif category in ("report.account", "account_recovery"):
+                escalation_reasons.append(
+                    "Вопросы доступа, взлома или пропажи имущества на аккаунте требуют верификации владельца (п. 1.4)"
                 )
             else:
                 escalation_reasons.append(
-                    "Окончательное решение о выдаче наказания игроку по приложенным доказательствам принимает модератор"
+                    f"Категория '{category}' входит в список обязательной проверки человеком (needs_human_always)"
                 )
-        elif category == "technical_bug":
-            lower = player_text.lower()
-            if any(w in lower for w in ("пропал", "исчез", "слетел", "потерял", "багажник", "тюнинг")):
+        elif category in ("ban_appeal", "complaint.admin"):
+            escalation_reasons.append(
+                "Обжалование наказания и жалоба на администратора рассматриваются старшей администрацией (п. 3.4)"
+            )
+        elif category in ("billing_refund", "report.payment"):
+            escalation_reasons.append(
+                "Финансовые вопросы, донат и возврат средств требуют ручной проверки чека специалистом"
+            )
+        elif category in ("account_recovery", "report.account"):
+            escalation_reasons.append(
+                "Восстановление доступа или взлом аккаунта требует верификации регистрационных данных владельца (п. 1.4)"
+            )
+        elif category in ("cheating_exploits", "complaint.cheat"):
+            escalation_reasons.append(
+                "Подозрение на читы или багоюз требует проверки доказательств и логов администратором (п. 5.1, 5.2)"
+            )
+        elif category in ("scam_fraud", "complaint.scam"):
+            escalation_reasons.append(
+                "Жалоба на обман/мошенничество с имуществом требует сверки условий сделки и логов передач администратором (п. 4.1, 4.2)"
+            )
+        elif category == "complaint.rmt_ads":
+            escalation_reasons.append(
+                "Подозрение на рекламу или RMT (продажу за реальные деньги) требует проверки логов старшим администратором (п. 2.3, 4.4)"
+            )
+        elif category in ("insult_toxicity", "rp_violation", "complaint.insult", "complaint.dm", "complaint.other", "report.complaint"):
+            if not facts.has_evidence:
                 escalation_reasons.append(
-                    "Заявлена пропажа игрового имущества из-за тех. сбоя — требуется проверка серверных логов (п. 8.1)"
+                    "Жалоба на нарушение игрока без приложенных доказательств: требуется запрос материалов или слежка в игре (п. ЖБ 1.2.2)"
+                )
+            else:
+                escalation_reasons.append(
+                    "Окончательное решение о выдаче наказания игроку по приложенным доказательствам принимает человек-модератор"
+                )
+        elif category == "complaint.invalid":
+            escalation_reasons.append(
+                "Жалоба без доказательств или не по форме требует проверки модератором перед закрытием или запросом материалов (п. ЖБ 1.1.2, ЖБ 1.2.2)"
+            )
+        elif category in ("technical_bug", "report.help"):
+            lower = player_text.lower()
+            if any(w in lower for w in ("пропал", "исчез", "слетел", "потерял", "багажник", "тюнинг", "застрял", "телепорт", "спавн", "флип")):
+                escalation_reasons.append(
+                    "Требуется действие администратора в игре (телепорт/спавн) или проверка технических логов"
                 )
 
-        if not has_reliable_rule and not is_spam and category != "spam_offtopic":
+        # For gameplay questions (`report.question`), if no rule was needed or found, only escalate if confidence is low
+        is_offtopic_or_question = is_spam or category in ("spam_offtopic", "report.offtopic", "report.question", "gameplay_question")
+        if not has_reliable_rule and not is_offtopic_or_question:
             escalation_reasons.append(
                 "Не найдено надежного подтверждения в базе правил (rules.json) — передача человеку без утверждения нарушения"
             )
 
-        if confidence < 0.68 and not is_spam:
+        if confidence < 0.65 and not is_spam and category not in ("report.offtopic", "spam_offtopic"):
             escalation_reasons.append(
                 f"Низкая уверенность классификации ({confidence:.2f}) требует ручной проверки"
             )
@@ -330,7 +368,6 @@ class TriageService:
         if escalation_reasons:
             return True, "; ".join(escalation_reasons)
 
-        # Check taxonomy default if still False
         if category in self.taxonomy.categories and self.taxonomy.categories[category].needs_human_default:
             return True, f"Категория '{category}' по регламенту требует подтверждения оператором"
 
@@ -400,6 +437,3 @@ class TriageService:
             "languages": self.analytics["language_counts"],
             "using_synthetic_data": settings.is_using_synthetic_train,
         }
-
-
-import math

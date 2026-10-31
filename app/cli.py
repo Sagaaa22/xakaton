@@ -10,12 +10,13 @@ import json
 import math
 from pathlib import Path
 import sys
-import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.config import settings
 from app.schemas import TriageRequest
 from app.triage import TriageService
+
+OUTCOME_KEYS = {"category", "priority", "label", "is_synthetic_demo", "verdict", "punishment", "violation"}
 
 
 def read_jsonl(path: Path) -> List[Dict[str, Any]]:
@@ -59,7 +60,6 @@ def compute_macro_f1(y_true: List[str], y_pred: List[str]) -> Tuple[float, Dict[
             "f1": round(f1, 4),
             "support": sum(1 for t in y_true if t == cls),
         }
-        # Include in macro average if class is present in ground truth
         if per_class[cls]["support"] > 0:
             f1_scores.append(f1)
 
@@ -82,14 +82,23 @@ def run_predict(in_path: Path, out_path: Path) -> Dict[str, Any]:
     is_synthetic = False
 
     outputs: List[Dict[str, Any]] = []
-    for idx, raw in enumerate(records):
+    for raw in records:
         if raw.get("is_synthetic_demo"):
             is_synthetic = True
-        # Support top-level `text` fallback if `messages` not present
-        # Never pass ground-truth labels into the triage input (they would leak into facts.extra_fields)
-        payload = {k: v for k, v in raw.items() if k not in ("category", "priority", "label", "is_synthetic_demo")}
-        if "messages" not in payload and "text" in payload:
-            payload["messages"] = [{"role": "player", "text": str(payload["text"]), "attachments": int(payload.get("attachments", 0))}]
+
+        # Strip outcome/label fields and administrator replies so triage runs strictly on player-side input
+        payload = {k: v for k, v in raw.items() if k not in OUTCOME_KEYS}
+        if "messages" in payload and isinstance(payload["messages"], list):
+            player_side_msgs = [
+                m for m in payload["messages"]
+                if isinstance(m, dict) and str(m.get("role", "player")).lower() not in ("admin", "moderator", "support")
+            ]
+            if player_side_msgs:
+                payload["messages"] = player_side_msgs
+        elif "messages" not in payload and "text" in payload:
+            payload["messages"] = [
+                {"role": "player", "text": str(payload["text"]), "attachments": int(payload.get("attachments", 0))}
+            ]
 
         req = TriageRequest(**payload)
         res = service.analyze(req, record_cache=True)
@@ -101,12 +110,12 @@ def run_predict(in_path: Path, out_path: Path) -> Dict[str, Any]:
         if res.needs_human:
             escalated += 1
 
-        gt_cat = raw.get("category") or raw.get("label")
+        # Ground-truth labels (explicit or extracted from administrator verdicts/replies in raw record)
+        gt_cat, gt_prio = service.classifier.extract_labels_from_record(raw)
         if isinstance(gt_cat, str) and gt_cat in service.taxonomy.valid_categories:
             y_true_cat.append(gt_cat)
             y_pred_cat.append(res.category)
 
-        gt_prio = raw.get("priority")
         if isinstance(gt_prio, str) and gt_prio in service.taxonomy.valid_priorities:
             y_true_prio.append(gt_prio)
             y_pred_prio.append(res.priority)
@@ -182,13 +191,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "predict":
         in_path = Path(args.in_file)
         if not in_path.exists():
-            # Fallback check in data/ or examples/ if default tickets.jsonl is requested
             for alt in [
                 settings.valid_data_path,
                 settings.root_dir / "examples" / "sample_tickets.jsonl",
             ]:
                 if alt.exists() and in_path.name in ("tickets.jsonl", "tickets_valid.jsonl"):
-                    print(f"[NOTICE] '{in_path}' not found; using demonstration file '{alt}'")
+                    print(f"[NOTICE] '{in_path}' not found; using file '{alt}'")
                     in_path = alt
                     break
         out_path = Path(args.out_file)
@@ -208,4 +216,3 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

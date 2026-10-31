@@ -90,16 +90,18 @@ class SafetyGuard:
 
         # Verify every rule ID mentioned in the draft exists in `valid_rule_ids`
         # (unless the draft is explicitly stating that a user-mentioned rule ID was not found)
+        valid_lower = {r.lower() for r in valid_rule_ids}
+        unknown_lower = {r.lower() for r in unknown_user_rules}
         cited_in_draft = re.findall(
-            r"(?:п\.|пункт\w*|правил\w*|rule|band\w*)\s*№?\s*(\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)|(\d{1,3}\.\d{1,3})\s*-?\s*band",
-            draft_text.lower(),
+            r"(?:п\.|пункт\w*|правил\w*|rule|band\w*)\s*№?\s*((?:ЖБ\s*|GZ\s*|ПГО\s*|ЛД\s*|ОПГ\s*|БВ\s*|ГВ\s*|СМ\s*|ВЗФ\s*)?\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)|(\d{1,3}\.\d{1,3})\s*-?\s*band",
+            draft_text,
+            flags=re.IGNORECASE,
         )
         for g1, g2 in cited_in_draft:
-            rid = (g1 or g2).strip()
+            rid = re.sub(r"\s+", " ", (g1 or g2).strip())
             if not rid:
                 continue
-            if rid not in valid_rule_ids and rid not in unknown_user_rules:
+            if rid.lower() not in valid_lower and rid.lower() not in unknown_lower:
                 violations.append(f"hallucinated_rule_id:{rid}")
 
         return len(violations) == 0, violations
-
