@@ -5,697 +5,345 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grand Mobile Support Copilot — Админ-панель</title>
 <style>
-/* ========================================================
-   GRAND MOBILE COPILOT — EDITORIAL BRUTALISM & TECHNICAL NOIR
-   Architectural tension, high typography hierarchy,
-   tactile hard shadows, zero generic SaaS slop.
-   ======================================================== */
-:root {
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-mono: 'Space Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+:root{
+  /* Modern High-Contrast SaaS Palette (Grand Mobile Ops Dark) */
+  --bg:#090d16;
+  --bg-subtle:#0d1424;
+  --surface:#101728;
+  --surface-hover:#162035;
+  --card:#151d30;
+  --card2:#1b253d;
+  --card-hover:#1f2b45;
+  --hover:#202c46;
+  --border:#26344e;
+  --border-subtle:#1b263b;
+  --border-focus:#6366f1;
 
-  /* Architectural Technical Noir Palette */
-  --bg: #07080b;
-  --bg-gradient: radial-gradient(ellipse at 50% 0%, #131620 0%, #07080b 60%, #040507 100%);
-  --surface: #0e1017;
-  --surface-alt: #141722;
-  --card: #11131b;
-  --card-hover: #171a25;
-  --card2: #191c28;
-  
-  --border: #222634;
-  --border-light: rgba(255, 255, 255, 0.08);
-  --border-accent: #f59e0b;
-  
-  --text: #ffffff;
-  --text2: #e2e8f0;
-  --text-muted: #838b9e;
-  --text-dark: #07080b;
-  
-  /* Signal Amber Yellow */
-  --accent: #f59e0b;
-  --accent-light: #fbbf24;
-  --accent-pale: #fef3c7;
-  --accent-subtle: rgba(245, 158, 11, 0.12);
-  --accent-border: rgba(245, 158, 11, 0.35);
-  
-  /* Tactile Hard Shadows (Zero fuzzy AI blur) */
-  --shadow-brutal: 3px 3px 0px #f59e0b;
-  --shadow-brutal-white: 3px 3px 0px rgba(245, 245, 240, 0.9);
-  --shadow-brutal-card: 4px 4px 0px #1a1e2b;
+  /* Typography */
+  --text:#f8fafc;
+  --text2:#cbd5e1;
+  --muted:#8e9db3;
+  --muted-light:#a4b3c9;
 
-  --ok: #10b981;
-  --ok-bg: rgba(16, 185, 129, 0.12);
-  --warn: #f59e0b;
-  --warn-bg: rgba(245, 158, 11, 0.12);
-  --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.14);
-}
+  /* Accents */
+  --accent:#6366f1;
+  --accent-hover:#4f46e5;
+  --accent-soft:rgba(99,102,241,0.15);
+  --accent-gradient:linear-gradient(135deg,#6366f1,#8b5cf6);
 
-*, *::before, *::after { box-sizing: border-box; }
-html { font-size: 14px; scroll-behavior: smooth; }
-body {
-  margin: 0; padding: 0;
-  background: var(--bg);
-  background-image: var(--bg-gradient);
-  background-attachment: fixed;
-  color: var(--text2);
-  font-family: var(--font-sans);
-  line-height: 1.55;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  -webkit-font-smoothing: antialiased;
+  /* Status Colors */
+  --ok:#10b981;
+  --ok-bg:rgba(16,185,129,0.12);
+  --ok-border:rgba(16,185,129,0.38);
+
+  --warn:#f59e0b;
+  --warn-bg:rgba(245,158,11,0.12);
+  --warn-border:rgba(245,158,11,0.38);
+
+  --bad:#ef4444;
+  --bad-bg:rgba(239,68,68,0.12);
+  --bad-border:rgba(239,68,68,0.42);
+
+  --crit:#ec4899;
+  --crit-bg:rgba(236,72,153,0.15);
+  --crit-border:rgba(236,72,153,0.45);
+
+  --info:#0ea5e9;
+  --info-bg:rgba(14,165,233,0.12);
+  --info-border:rgba(14,165,233,0.38);
+
+  /* Dimensions & Shadows */
+  --radius-sm:6px;
+  --radius:10px;
+  --radius-lg:14px;
+  --focus:0 0 0 3px rgba(99,102,241,0.35);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.25);
+  --shadow:0 4px 14px rgba(0,0,0,0.35);
+  --shadow-lg:0 16px 36px rgba(0,0,0,0.55);
 }
 
-/* Blueprint micro-grid */
-body::before {
-  content: "";
-  position: fixed; inset: 0; pointer-events: none; z-index: 1;
-  background-size: 48px 48px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14.5px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Inter",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.55;
+  min-height:100vh;
+  overflow-x:hidden;
 }
+a{color:#a5b4fc;text-decoration:none;transition:color .15s}
+a:hover{color:#c7d2fe;text-decoration:underline}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:none;box-shadow:var(--focus);border-radius:var(--radius-sm)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
-.wix-app { position: relative; z-index: 2; display: flex; flex-direction: column; min-height: 100vh; }
+/* Layout Grid */
+.app{display:grid;grid-template-columns:255px 1fr;grid-template-rows:auto auto 1fr;min-height:100vh;position:relative}
+.topbar{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:10px 22px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:40;box-shadow:var(--shadow-sm)}
+.demo-strip{grid-column:1/3;background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.3);color:#fcd34d;font-size:0.83rem;padding:6px 22px;display:flex;align-items:center;gap:8px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:700}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--accent-gradient);display:grid;place-items:center;font-weight:800;color:#fff;box-shadow:0 2px 8px rgba(99,102,241,0.4)}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:0.75rem;margin-top:1px}
+.topbar .spacer{flex:1}
+.userbox{display:flex;align-items:center;gap:10px;font-size:0.85rem;color:var(--text2)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);color:var(--text2);font-size:0.88rem;font-weight:500;transition:all .15s ease}
+.nav-link:hover{background:var(--card);color:var(--text);transform:translateX(2px)}
+.nav-link.active{background:var(--accent-soft);color:#ffffff;box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
+.nav-link .count{margin-left:auto;background:var(--card2);border-radius:999px;padding:1px 8px;font-size:0.72rem;color:var(--text2);font-weight:600}
+.nav-link .count.hot{background:rgba(239,68,68,0.22);color:#fca5a5}
+.nav-link .lock{margin-left:auto;font-size:0.72rem;color:var(--muted)}
+.nav-sep{height:1px;background:var(--border-subtle);margin:8px 6px}
+.main{padding:22px 26px;min-width:0;overflow:auto}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.page-head h1{font-size:1.45rem;font-weight:700;letter-spacing:-0.015em;color:var(--text)}
+.page-head p{color:var(--text2);font-size:0.89rem;max-width:80ch;margin-top:3px}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* ================== Structural Header (Broadsheet) ================== */
-.wix-topbar {
-  position: sticky; top: 0; z-index: 1000;
-  background: rgba(7, 8, 11, 0.95);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:36px;padding:0 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--card);color:var(--text);
+  font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap;
+  transition:background-color .15s ease,border-color .15s ease,transform .1s ease,box-shadow .15s ease;
+  user-select:none;text-decoration:none;
 }
-.wix-topbar-inner {
-  max-width: 1440px; margin: 0 auto;
-  padding: 0 24px; height: 68px;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px;
-}
-.wix-brand {
-  display: flex; align-items: baseline; gap: 8px;
-  text-decoration: none; color: #ffffff;
-}
-.brand-code {
-  font-family: var(--font-mono);
-  font-size: 0.72rem; font-weight: 700;
-  color: var(--accent); letter-spacing: 1px;
-}
-.brand-title {
-  font-family: var(--font-sans);
-  font-weight: 900; font-size: 1.15rem; letter-spacing: -0.5px;
-  text-transform: uppercase; color: #fff;
-}
-.brand-sub {
-  font-family: var(--font-serif);
-  font-style: italic; font-size: 1.25rem; color: var(--text-muted);
-  font-weight: 400; margin-left: 2px;
-}
+.btn:hover:not(:disabled){background:var(--hover);border-color:#384968;transform:translateY(-1px);color:var(--text);text-decoration:none}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:disabled{opacity:0.45;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,0.32)}
+.btn.primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);box-shadow:0 4px 14px rgba(99,102,241,0.48)}
+.btn.ok{background:var(--ok-bg);border-color:var(--ok-border);color:#6ee7b7}
+.btn.ok:hover:not(:disabled){background:rgba(16,185,129,0.22);border-color:rgba(16,185,129,0.5)}
+.btn.danger{background:var(--bad-bg);border-color:var(--bad-border);color:#fca5a5}
+.btn.danger:hover:not(:disabled){background:rgba(239,68,68,0.22);border-color:rgba(239,68,68,0.55)}
+.btn.warn{background:var(--warn-bg);border-color:var(--warn-border);color:#fcd34d}
+.btn.warn:hover:not(:disabled){background:rgba(245,158,11,0.22);border-color:rgba(245,158,11,0.5)}
+.btn.sm{height:28px;padding:0 10px;font-size:0.78rem;border-radius:6px;gap:5px}
 
-.wix-nav {
-  display: flex; align-items: center; gap: 2px;
-}
-.wix-nav-item {
-  color: var(--text-muted);
-  text-decoration: none;
-  font-family: var(--font-mono);
-  font-size: 0.78rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  padding: 6px 12px; border: 1px solid transparent;
-  transition: all 0.15s ease;
-  cursor: pointer; background: transparent;
-}
-.wix-nav-item:hover {
-  color: #ffffff; border-color: var(--border);
-  background: rgba(255, 255, 255, 0.03);
-}
-.wix-nav-item.active {
-  color: #ffffff;
-  border-color: var(--accent-border);
-  background: var(--accent-subtle);
-}
-
-/* Dropdown */
-.wix-dropdown { position: relative; }
-.wix-dropdown-btn { outline: none; }
-.wix-dropdown-menu {
-  display: none; position: absolute; top: calc(100% + 8px); right: 0;
-  background: #0d0f15; border: 1px solid var(--border);
-  border-radius: 0; padding: 6px;
-  min-width: 240px; box-shadow: 4px 4px 0px #000;
-  z-index: 1010; font-family: var(--font-mono);
-}
-.wix-dropdown.open .wix-dropdown-menu { display: block; }
-.wix-dropdown-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px; color: var(--text2);
-  text-decoration: none; font-size: 0.78rem; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.5px;
-}
-.wix-dropdown-item:hover {
-  background: var(--accent-subtle); color: var(--accent);
-}
-.wix-dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
-
-/* Right actions */
-.wix-topbar-actions {
-  display: flex; align-items: center; gap: 12px;
-}
-.shift-badge {
-  display: flex; align-items: center; gap: 6px;
-  font-family: var(--font-mono); font-size: 0.72rem;
-  color: var(--text-muted); border: 1px solid var(--border);
-  padding: 5px 10px; background: rgba(0, 0, 0, 0.3);
-}
-.pulse-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
-}
-
-.brutal-shadow {
-  box-shadow: 3px 3px 0px var(--accent);
-  transition: all 0.12s ease-in-out;
-}
-.brutal-shadow:hover {
-  transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0px var(--accent);
-}
-
-.wix-btn-new {
-  background: var(--accent);
-  color: #07080b !important;
-  font-family: var(--font-mono); font-weight: 700;
-  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;
-  padding: 8px 14px; border: 1px solid #000;
-  cursor: pointer; text-decoration: none;
-}
-.wix-btn-new:hover { background: var(--accent-light); }
-
-.wix-user-pill {
-  display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--border); padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.02);
-}
-.wix-user-select {
-  background: transparent; border: none; color: #fff;
-  font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;
-  outline: none; cursor: pointer;
-}
-.wix-user-select option { background: #0e1017; color: #fff; }
-
-/* Ticker Strip */
-.wix-demo-ticker {
-  background: #0a0b10;
-  border-bottom: 1px solid var(--border);
-  padding: 6px 24px; text-align: center;
-  font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent);
-  letter-spacing: 0.5px;
-}
-
-/* ================== Main Container ================== */
-.wix-main-container {
-  max-width: 1440px; margin: 0 auto; width: 100%;
-  padding: 28px 24px 60px 24px;
-  flex: 1;
-}
-
-/* ================== Editorial Broadsheet Hero ================== */
-.hero-broadsheet {
-  border: 1px solid var(--border);
-  background: #0a0c12;
-  padding: 28px 32px 36px 32px;
-  margin-bottom: 36px;
-  position: relative;
-}
-
-.ticker-bar {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 14px; margin-bottom: 28px;
-  font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted);
-  flex-wrap: wrap; gap: 10px;
-}
-.ticker-left, .ticker-right { display: flex; align-items: center; gap: 16px; }
-.stamp-badge {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: var(--accent); font-weight: 700;
-  padding: 3px 8px; letter-spacing: 1px;
-}
-
-.hero-split {
-  display: grid; grid-template-columns: 1fr 360px;
-  gap: 36px; align-items: start;
-}
-@media (max-width: 1024px) {
-  .hero-split { grid-template-columns: 1fr; }
-}
-
-.hero-editorial-title {
-  font-family: var(--font-serif);
-  font-size: clamp(3rem, 5.5vw, 5.5rem);
-  font-weight: 400; line-height: 0.96;
-  letter-spacing: -0.02em; color: #f5f5f0;
-  margin: 0 0 24px 0;
-}
-.hero-editorial-title .italic { font-style: italic; }
-.hero-editorial-title .text-muted { color: #64748b; font-weight: 300; }
-.hero-accent {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 8px;
-  text-decoration-thickness: 2px;
-}
-
-.hero-quote {
-  max-width: 680px;
-  border-left: 2px solid var(--accent);
-  padding-left: 16px; margin-bottom: 28px;
-}
-.hero-quote p {
-  font-size: 1.05rem; line-height: 1.6;
-  color: var(--text2); margin: 0 0 8px 0;
-}
-.quote-footnote {
-  font-family: var(--font-mono); font-size: 0.72rem;
-  color: var(--text-muted); letter-spacing: 1px;
-}
-
-.hero-actions {
-  display: flex; align-items: center; gap: 14px;
-  flex-wrap: wrap; padding-top: 6px;
-}
-
-.btn-brutal-primary {
-  background: var(--accent); color: #07080b;
-  font-family: var(--font-mono); font-weight: 700;
-  font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;
-  padding: 12px 24px; border: 1px solid #000;
-  box-shadow: 3px 3px 0px #fff;
-  cursor: pointer; text-decoration: none;
-  display: inline-flex; align-items: center; gap: 10px;
-  transition: all 0.12s ease;
-}
-.btn-brutal-primary:hover {
-  transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0px #fff;
-  background: var(--accent-light);
-}
-
-.btn-brutal-white {
-  background: #141722; color: #f5f5f0;
-  font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  padding: 12px 22px; border: 1px solid var(--border);
-  box-shadow: 3px 3px 0px var(--border);
-  cursor: pointer; text-decoration: none;
-  transition: all 0.12s ease;
-}
-.btn-brutal-white:hover {
-  border-color: #fff; color: #fff;
-  transform: translate(1px, 1px);
-}
-
-.btn-brutal-link {
-  font-family: var(--font-mono); font-size: 0.78rem;
-  color: var(--text-muted); text-decoration: underline;
-  text-underline-offset: 4px; text-transform: uppercase;
-  letter-spacing: 0.5px; padding: 8px 12px;
-}
-.btn-brutal-link:hover { color: #fff; }
-
-/* Hero Terminal Box */
-.hero-terminal {
-  background: #0d0f16;
-  border: 1px solid var(--border);
-  padding: 20px;
-}
-.terminal-head {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 10px; margin-bottom: 16px;
-}
-.terminal-title {
-  font-family: var(--font-mono); font-size: 0.78rem;
-  font-weight: 700; color: #fff; letter-spacing: 0.5px;
-}
-.terminal-sync {
-  font-family: var(--font-mono); font-size: 0.68rem;
-  background: rgba(245, 158, 11, 0.15); color: var(--accent);
-  border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 6px;
-}
-
-.metric-row {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 12px; margin-bottom: 12px;
-}
-.metric-row:last-of-type { border-bottom: none; }
-.metric-top {
-  display: flex; justify-content: space-between; align-items: baseline;
-  margin-bottom: 4px;
-}
-.metric-lbl {
-  font-family: var(--font-mono); font-size: 0.74rem;
-  color: var(--text-muted); text-transform: uppercase;
-}
-.metric-val {
-  font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700;
-}
-.metric-desc {
-  font-size: 0.78rem; color: #64748b; margin: 0; line-height: 1.4;
-}
-
-.terminal-foot {
-  background: #06070a; border: 1px solid var(--border);
-  padding: 10px 12px; margin-top: 14px;
-  font-family: var(--font-mono); font-size: 0.72rem;
-  color: var(--text-muted); line-height: 1.5;
-}
-
-.hero-footnote-grid {
-  border-top: 1px solid var(--border);
-  padding-top: 18px; margin-top: 28px;
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px; font-family: var(--font-mono);
-}
-.footnote-tag {
-  display: block; font-size: 0.76rem; font-weight: 700;
-  color: #fff; text-transform: uppercase; margin-bottom: 2px;
-}
-.footnote-sub {
-  font-size: 0.7rem; color: var(--text-muted);
-}
-
-/* ================== General Cards, Grid, Buttons ================== */
-.card {
-  background: var(--card); border: 1px solid var(--border);
-  padding: 20px; margin-bottom: 16px;
-}
-.card h2 {
-  font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  color: #fff; margin: 0 0 14px 0;
-}
-
-.btn {
-  font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  padding: 8px 16px; border: 1px solid var(--border);
-  background: var(--surface-alt); color: #fff;
-  cursor: pointer; text-decoration: none;
-  display: inline-flex; align-items: center; gap: 6px;
-  transition: all 0.15s ease;
-}
-.btn:hover { background: var(--card-hover); border-color: #fff; }
-.btn.primary {
-  background: var(--accent); border-color: #000; color: #07080b !important;
-  font-weight: 700; box-shadow: 2px 2px 0px #fff;
-}
-.btn.primary:hover { background: var(--accent-light); }
-.btn.sm { font-size: 0.72rem; padding: 4px 10px; }
-
-.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.stat {
-  background: var(--card); border: 1px solid var(--border);
-  padding: 16px; transition: border-color 0.15s ease;
-}
-.stat:hover { border-color: var(--accent); }
-.stat a { text-decoration: none; color: inherit; display: block; }
-.stat .v { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
-.stat .l { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; }
-.stat.hot .v { color: var(--accent); }
-.stat.ok .v { color: #34d399; }
-
-/* Numbered Rules */
-.wix-rules-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 16px; margin-top: 20px;
-}
-.wix-rule-card {
-  background: var(--card); border: 1px solid var(--border);
-  padding: 24px; position: relative;
-  transition: all 0.15s ease;
-}
-.wix-rule-card:hover { border-color: var(--accent); }
-.wix-rule-num {
-  font-family: var(--font-mono); font-size: 2.2rem; font-weight: 700;
-  color: var(--accent); line-height: 1; margin-bottom: 8px;
-}
-.wix-rule-title {
-  font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0 0 8px 0;
-}
-.wix-rule-text {
-  font-size: 0.88rem; color: var(--text2); line-height: 1.5; margin-bottom: 12px;
-}
-.wix-rule-punishment {
-  background: #090a0f; border: 1px solid var(--border);
-  padding: 6px 10px; font-family: var(--font-mono);
-  font-size: 0.75rem; color: var(--accent); font-weight: 600;
-}
-
-/* Groups */
-.wix-groups-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px; margin-top: 20px;
-}
-.wix-group-card {
-  background: var(--card); border: 1px solid var(--border);
-  padding: 22px; display: flex; flex-direction: column; justify-content: space-between;
-  transition: border-color 0.15s ease;
-}
-.wix-group-card:hover { border-color: var(--accent); }
-.wix-group-head {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 12px;
-}
-.wix-group-icon {
-  width: 38px; height: 38px; background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem; color: var(--accent);
-}
-.wix-group-badge {
-  font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;
-  border: 1px solid var(--border); padding: 2px 6px; color: var(--text-muted);
-}
-.wix-group-title { font-size: 1.05rem; font-weight: 700; color: #fff; margin: 0 0 6px 0; }
-.wix-group-desc { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.45; }
-.wix-group-foot {
-  display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid var(--border); padding-top: 12px;
-  font-family: var(--font-mono); font-size: 0.75rem;
-}
-
-/* Members */
-.wix-members-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px; margin-top: 20px;
-}
-.wix-member-card {
-  background: var(--card); border: 1px solid var(--border);
-  padding: 24px; text-align: center;
-}
-.wix-member-avatar {
-  width: 56px; height: 56px; background: var(--accent);
-  color: #07080b; font-family: var(--font-mono); font-weight: 800; font-size: 1.2rem;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 12px; border: 1px solid #000;
-}
-.wix-member-name { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0 0 4px 0; }
-.wix-member-role { font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); margin-bottom: 12px; }
-.wix-member-stats {
-  display: flex; justify-content: space-around; border-top: 1px solid var(--border);
-  padding-top: 12px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);
-}
+/* Form Controls */
+.input,.select,.textarea{
+  background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:7px 11px;font-size:0.86rem;color:var(--text);min-width:0;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.input:hover,.select:hover,.textarea:hover{border-color:#384968}
+.input:focus,.select:focus,.textarea:focus{border-color:var(--accent);outline:none;box-shadow:var(--focus)}
+.textarea{width:100%;resize:vertical;line-height:1.55}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.filters .input{flex:1 1 210px}
 
 /* Badges */
-.b {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;
-  padding: 2px 6px; border: 1px solid var(--border); line-height: 1.3;
-}
-.b-cat { background: rgba(245, 158, 11, 0.1); color: var(--accent); border-color: rgba(245, 158, 11, 0.3); }
-.b-subcat { background: rgba(255, 255, 255, 0.05); color: #fff; }
-.b-auto { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
-.b-human { background: rgba(245, 158, 11, 0.15); color: var(--accent); border-color: rgba(245, 158, 11, 0.3); }
-.b-muted { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); }
-.p-critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); }
-.p-high { background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4); }
-.p-medium { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4); }
-.p-low { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3); }
+.b{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;border:1px solid transparent;white-space:nowrap;line-height:1.35}
+.p-critical{background:var(--crit-bg);color:#f9a8d4;border-color:var(--crit-border)}
+.p-high{background:var(--bad-bg);color:#fca5a5;border-color:var(--bad-border)}
+.p-medium{background:var(--warn-bg);color:#fcd34d;border-color:var(--warn-border)}
+.p-low{background:var(--ok-bg);color:#6ee7b7;border-color:var(--ok-border)}
+.s-new{background:rgba(59,130,246,0.18);color:#93c5fd;border-color:rgba(59,130,246,0.4)}
+.s-in_progress{background:rgba(99,102,241,0.2);color:#c7d2fe;border-color:rgba(99,102,241,0.4)}
+.s-awaiting_player{background:rgba(148,163,184,0.18);color:#cbd5e1;border-color:rgba(148,163,184,0.35)}
+.s-escalated{background:rgba(239,68,68,0.2);color:#fecaca;border-color:rgba(239,68,68,0.4)}
+.s-returned{background:rgba(245,158,11,0.2);color:#fde68a;border-color:rgba(245,158,11,0.4)}
+.s-resolved{background:rgba(16,185,129,0.18);color:#a7f3d0;border-color:rgba(16,185,129,0.4)}
+.s-closed{background:rgba(100,116,139,0.25);color:#cbd5e1;border-color:rgba(100,116,139,0.4)}
+.b-lang{background:rgba(59,130,246,0.14);color:#93c5fd;text-transform:uppercase;border-color:rgba(59,130,246,0.3)}
+.b-cat{background:rgba(139,92,246,0.16);color:#ddd6fe;border-color:rgba(139,92,246,0.35)}
+.b-subcat{background:rgba(56,189,248,0.15);color:#bae6fd;border-color:rgba(56,189,248,0.35)}
+.b-human{background:var(--bad-bg);color:#fecaca;border-color:var(--bad-border)}
+.b-auto{background:var(--ok-bg);color:#a7f3d0;border-color:var(--ok-border)}
+.b-muted{background:var(--card2);color:var(--text2);border-color:var(--border)}
 
-/* Table */
-.table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--border); }
-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
-caption { text-align: left; padding: 10px 14px; font-family: var(--font-mono); font-weight: 700; color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase; }
-th { background: #0c0e14; padding: 9px 12px; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); }
-th button { background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0; }
-td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-tr:hover td { background: var(--card-hover); }
-tr.sel td { background: rgba(245, 158, 11, 0.08); border-left: 2px solid var(--accent); }
+/* Cards & Surfaces */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm)}
+.card h2,.card h3{font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;cursor:default;transition:border-color .15s ease}
+.stat:hover{border-color:#384968}
+.stat a{display:block;color:inherit}
+.stat .v{font-size:1.65rem;font-weight:700;color:var(--text);line-height:1.2}
+.stat .l{color:var(--text2);font-size:0.79rem;margin-top:4px}
+.stat.hot{border-color:rgba(239,68,68,0.45);background:linear-gradient(180deg,rgba(239,68,68,0.06),transparent)}
+.stat.ok{border-color:rgba(16,185,129,0.4);background:linear-gradient(180deg,rgba(16,185,129,0.05),transparent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px}
+.kv div{background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px}
+.kv span{display:block;font-size:0.73rem;color:var(--muted);margin-bottom:2px}
+.kv b{font-size:0.87rem;font-weight:600;word-break:break-word;color:var(--text)}
+.muted{color:var(--muted)}
+.small{font-size:0.82rem}
 
-/* Inputs, filters & modals */
-.filters {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
-  background: var(--surface); border: 1px solid var(--border);
-  padding: 12px; align-items: center;
-}
-.input, .select, textarea.input {
-  background: #090a0f; border: 1px solid var(--border);
-  color: #fff; padding: 7px 12px; font-family: var(--font-mono); font-size: 0.8rem;
-  outline: none; transition: border-color 0.15s ease;
-}
-.input:focus, .select:focus, textarea.input:focus {
-  border-color: var(--accent);
-}
+/* Confidence Bar */
+.conf-wrap{background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px}
+.conf-track{height:8px;background:var(--card2);border-radius:999px;overflow:hidden;margin-top:6px}
+.conf-fill{height:100%;border-radius:999px;transition:width .35s ease}
 
-.modal-bg {
-  position: fixed; inset: 0; z-index: 2000; background: rgba(4, 5, 7, 0.88);
-  backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center;
-  padding: 20px;
-}
-.modal-bg.open { display: flex; }
-.modal {
-  background: #0e1017; border: 1px solid var(--border);
-  padding: 28px; width: 100%; max-width: 580px; box-shadow: 6px 6px 0px #000;
-  max-height: 90vh; overflow-y: auto;
-}
-.modal h3 {
-  font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700;
-  text-transform: uppercase; color: #fff; margin: 0 0 16px 0;
-}
+/* Split View */
+.split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(400px,1fr);gap:16px;align-items:start}
+.detail{position:sticky;top:70px;max-height:calc(100vh - 90px);overflow-y:auto;padding-right:2px}
 
-.split { display: grid; grid-template-columns: 1fr 420px; gap: 16px; align-items: start; }
-@media (max-width: 1024px) { .split { grid-template-columns: 1fr; } }
-.detail { position: sticky; top: 80px; }
+/* Tables */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:0.85rem}
+caption{text-align:left;padding:11px 14px;color:var(--text2);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
+th{position:sticky;top:0;background:var(--card2);text-align:left;font-weight:600;color:var(--text2);padding:0;border-bottom:1px solid var(--border);white-space:nowrap;z-index:2}
+th button{background:none;border:0;padding:10px 12px;width:100%;text-align:left;cursor:pointer;color:inherit;font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;justify-content:space-between}
+th button:hover{background:var(--hover);color:var(--text)}
+th span.th{display:block;padding:10px 12px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em}
+td{padding:9px 12px;border-bottom:1px solid rgba(38,52,78,0.6);vertical-align:top}
+tbody tr{cursor:pointer;transition:background-color .12s ease}
+tbody tr:hover{background:var(--hover)}
+tbody tr.sel{background:rgba(99,102,241,0.13);box-shadow:inset 3px 0 0 var(--accent)}
+td.id{font-family:monospace;color:#c7d2fe;white-space:nowrap;font-size:0.83rem}
+.snip{color:var(--muted);font-size:0.78rem;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;max-width:320px;margin-top:2px}
 
-/* Footer */
-.wix-footer {
-  background: #050608; border-top: 1px solid var(--border);
-  padding: 32px 24px; margin-top: auto; font-family: var(--font-mono);
-}
-.wix-footer-inner {
-  max-width: 1440px; margin: 0 auto;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-wrap: wrap; gap: 14px;
-}
-.wix-footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
-.wix-footer-links a { color: var(--text-muted); text-decoration: none; font-size: 0.75rem; text-transform: uppercase; }
-.wix-footer-links a:hover { color: var(--accent); }
-.wix-footer-copy { font-size: 0.72rem; color: #525969; }
+/* Ticket Details */
+.t-head{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:12px}
+.t-head h2{font-size:1.15rem;font-family:monospace;margin-right:6px;text-transform:none;color:var(--text);font-weight:700}
+.banner{border-radius:var(--radius);padding:11px 16px;font-size:0.86rem;line-height:1.5}
+.banner.human{background:var(--bad-bg);border:1px solid var(--bad-border);color:#fee2e2}
+.banner.auto{background:var(--ok-bg);border:1px solid var(--ok-border);color:#d1fae5}
+.banner.info{background:var(--info-bg);border:1px solid var(--info-border);color:#e0f2fe}
+.banner.warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:#fef3c7}
+.banner b{display:block;margin-bottom:3px;font-weight:600}
+.msg{background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px}
+.msg.admin{border-left:3px solid var(--accent)}
+.msg .meta{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-bottom:5px}
+.msg .tx{white-space:pre-wrap;font-size:0.88rem;line-height:1.55}
+.rule{background:var(--bg-subtle);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:10px 13px}
+.rule .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
+.rule .rid{background:var(--accent);color:#fff;font-weight:700;font-size:0.76rem;padding:2px 8px;border-radius:5px}
+.rule q{display:block;font-style:italic;color:var(--text2);font-size:0.84rem;margin:5px 0;quotes:"«" "»"}
+.rule .pun{font-size:0.78rem;color:#fcd34d;font-weight:500}
+.ver-ok{color:#6ee7b7;font-size:0.78rem;font-weight:600}
+.ver-bad{color:#fca5a5;font-size:0.78rem;font-weight:600}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.timeline{list-style:none;display:flex;flex-direction:column;gap:7px;font-size:0.83rem}
+.timeline li{border-left:2px solid var(--border);padding:3px 0 3px 12px}
+.timeline .when{color:var(--muted);font-size:0.75rem}
+details summary{cursor:pointer;color:var(--text2);font-size:0.86rem;font-weight:500}
+ul.reasons{padding-left:18px;font-size:0.83rem;color:var(--text2);display:flex;flex-direction:column;gap:4px;margin-top:6px}
 
-.i { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; vertical-align: middle; }
-.toasts { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 6px; font-family: var(--font-mono); }
-.toast { background: #11131a; border: 1px solid var(--border); padding: 10px 14px; color: #fff; font-size: 0.78rem; box-shadow: 3px 3px 0px #000; }
-.toast.ok { border-color: rgba(16,185,129,0.6); }
-.toast.error { border-color: rgba(239,68,68,0.6); }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
-.stack { display: flex; flex-direction: column; gap: 8px; }
-.msg { padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); color: inherit; text-decoration: none; display: block; }
-.msg:hover { background: var(--card-hover); border-color: var(--accent); }
-.kv { display: flex; flex-direction: column; gap: 6px; }
-.kv div { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.78rem; }
-.kv span { color: var(--text-muted); }
-.kv b { color: #fff; }
+/* Telegram Cards */
+.tg-msg{background:#152232;border:1px solid #234568;border-radius:var(--radius);padding:13px 16px;font-size:0.86rem;line-height:1.5;box-shadow:var(--shadow-sm)}
+.tg-msg pre{white-space:pre-wrap;font-family:inherit}
+.tg-kb{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.tg-btn{background:#234568;border:0;color:#fff;padding:8px 12px;border-radius:7px;font-size:0.83rem;font-weight:600;cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background-color .15s}
+.tg-btn:hover:not(:disabled){background:#2e5a88}
+.tg-btn:disabled{opacity:0.5;cursor:default}
+
+/* Empty State & Error Boxes */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:36px 20px;color:var(--text2)}
+.empty-state .empty-icon{width:46px;height:46px;border-radius:50%;background:var(--card2);display:grid;place-items:center;margin-bottom:12px;color:var(--muted)}
+.empty-state .empty-icon svg{width:24px;height:24px}
+.empty-state h3{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:5px;text-transform:none;letter-spacing:normal}
+.empty-state p{font-size:0.84rem;color:var(--muted);max-width:50ch}
+.empty{padding:28px;text-align:center;color:var(--muted);font-size:0.88rem}
+.err{padding:14px 16px;border-radius:var(--radius-sm);background:var(--bad-bg);border:1px solid var(--bad-border);color:#fee2e2;font-size:0.88rem;display:flex;align-items:center;gap:10px}
+
+/* Spinner & Shimmer Skeletons */
+.spinner{width:20px;height:20px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skel{
+  height:14px;border-radius:6px;
+  background:linear-gradient(90deg,var(--card2) 0%,var(--hover) 50%,var(--card2) 100%);
+  background-size:200% 100%;
+  animation:skShimmer 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  margin:6px 0;
+}
+@keyframes skShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-card{padding:20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+
+/* Bar Charts */
+.bar-row{display:grid;grid-template-columns:190px 1fr 48px;gap:10px;align-items:center;font-size:0.82rem;margin:5px 0}
+.bar-row .tr{height:8px;background:var(--bg-subtle);border-radius:999px;overflow:hidden}
+.bar-row .fl{height:100%;background:var(--accent)}
+.bar-row .nm{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Modals & Toasts */
+.modal-bg{position:fixed;inset:0;background:rgba(4,7,14,0.78);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:90;padding:16px;animation:fadeIn 0.15s ease-out}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:620px;max-height:90vh;overflow-y:auto;padding:22px 24px;box-shadow:var(--shadow-lg);animation:modalScale 0.2s cubic-bezier(0.16,1,0.3,1)}
+.modal h3{font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:14px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:0.81rem;color:var(--text2);margin-bottom:5px;font-weight:600}
+.field .input,.field .select{width:100%}
+.check{display:flex;gap:9px;align-items:flex-start;font-size:0.86rem;margin:8px 0;cursor:pointer}
+.check input{margin-top:3px}
+.toasts{position:fixed;right:22px;bottom:22px;display:flex;flex-direction:column;gap:10px;z-index:100;pointer-events:none}
+.toast{
+  pointer-events:auto;display:flex;align-items:center;gap:10px;
+  background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:11px 15px;font-size:0.86rem;color:var(--text);max-width:420px;
+  box-shadow:var(--shadow);border-left:4px solid var(--ok);
+  animation:toastEnter 0.22s ease-out;
+}
+.toast.error{border-left-color:var(--bad)}
+.toast.warn{border-left-color:var(--warn)}
+.toast-icon{flex:none;display:flex;align-items:center;justify-content:center}
+.toast.ok .toast-icon{color:var(--ok)}
+.toast.error .toast-icon{color:var(--bad)}
+.toast.warn .toast-icon{color:var(--warn)}
+.toast-text{flex:1;word-break:break-word}
+.toast.toast-exit{opacity:0;transform:translateX(20px);transition:all 0.25s ease}
+@keyframes toastEnter{from{opacity:0;transform:translateY(12px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalScale{from{opacity:0;transform:scale(0.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.tabs{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:0.85rem;font-weight:500;transition:all .15s}
+.tab:hover{background:var(--hover)}
+.tab[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:#fff;font-weight:600}
+
+/* ==================== Responsive Breakpoints ==================== */
+@media (max-width:1180px){
+  .split{grid-template-columns:1fr;gap:16px}
+  .detail{position:static;max-height:none}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:1fr}
+  #sidebarToggle{display:inline-flex !important}
+  .sidebar{
+    display:none;position:fixed;top:56px;left:0;right:0;bottom:0;
+    background:var(--surface);z-index:45;padding:18px 14px;
+    overflow-y:auto;border-right:0;box-shadow:var(--shadow-lg);
+  }
+  .sidebar.open{display:flex;flex-direction:column}
+  .topbar{padding:10px 14px;gap:10px;flex-wrap:wrap}
+  .grid2{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .main{padding:16px 14px}
+}
+@media (max-width:540px){
+  .stats{grid-template-columns:1fr}
+  .tg-kb{grid-template-columns:1fr}
+  .bar-row{grid-template-columns:120px 1fr 38px}
+  .brand small{display:none}
+}
 </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-<div class="wix-app">
-  <!-- Sticky Topbar (Wix Community Forum Navigation) -->
-    <!-- Structural Header (Broadsheet Technical Format) -->
-  <header class="wix-topbar">
-    <div class="wix-topbar-inner">
-      <a href="#overview" class="wix-brand" title="Grand Mobile Support Terminal">
-        <span class="brand-code">[ GM // 01 ]</span>
-        <span class="brand-title">GRAND MOBILE</span>
-        <span class="brand-sub">Copilot</span>
-      </a>
-      
-      <nav class="wix-nav" id="wixNav" aria-label="Навигация терминала">
-        <a href="#overview" class="wix-nav-item active" data-page="overview">01. Overview</a>
-        <a href="#groups" class="wix-nav-item" data-page="groups">02. Groups & Hubs</a>
-        <a href="#feed" class="wix-nav-item" data-page="feed">03. Live Feed</a>
-        <a href="#rules" class="wix-nav-item" data-page="rules">04. Codex & Rules</a>
-        <a href="#members" class="wix-nav-item" data-page="members">05. Administration</a>
-        <a href="#contact" class="wix-nav-item" data-page="contact">06. Telegram API</a>
-        
-        <div class="wix-dropdown" id="wixMoreDropdown">
-          <button type="button" class="wix-nav-item wix-dropdown-btn" id="wixMoreBtn">
-            More Tools ↓
-          </button>
-          <div class="wix-dropdown-menu" id="wixDropdownMenu">
-            <a href="#mine" class="wix-dropdown-item">[07] Мои тикеты</a>
-            <a href="#queue" class="wix-dropdown-item">[08] Очередь репортов</a>
-            <a href="#senior" class="wix-dropdown-item">[09] Старший админ</a>
-            <a href="#admin-calls" class="wix-dropdown-item">[10] Прямые вызовы SOS</a>
-            <div class="wix-dropdown-divider"></div>
-            <a href="#assistant" class="wix-dropdown-item">[AI] Admin Assistant</a>
-            <a href="#evidence" class="wix-dropdown-item">[OCR] Доказательства</a>
-            <a href="#fraud" class="wix-dropdown-item">[SEC] Антифрод / Фейки</a>
-            <a href="#offenders" class="wix-dropdown-item">[REG] Повторные нарушители</a>
-            <div class="wix-dropdown-divider"></div>
-            <a href="#analytics" class="wix-dropdown-item">[DAT] Аналитика ИИ</a>
-            <a href="#audit" class="wix-dropdown-item">[LOG] История аудита</a>
-            <a href="#settings" class="wix-dropdown-item">[CFG] Настройки системы</a>
-          </div>
-        </div>
-      </nav>
-      
-      <div class="wix-topbar-actions">
-        <div class="shift-badge">
-          <span class="pulse-dot"></span>
-          <span id="shiftUserTag">SHIFT: AD_DIAS [SR]</span>
-        </div>
-        <button type="button" class="wix-btn-new brutal-shadow" id="btnNewComplaint">
-          + File Complaint
-        </button>
-        <div class="wix-user-pill">
-          <select id="userSelect" class="wix-user-select" aria-label="Смена пользователя"></select>
-          <span id="roleBadge" class="b b-muted"></span>
-        </div>
-      </div>
+<div class="app">
+  <header class="topbar">
+    <button type="button" class="btn sm" id="sidebarToggle" aria-label="Открыть меню навигации" title="Меню навигации" style="display:none;margin-right:4px">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="brand"><div class="logo" aria-hidden="true">GM</div><div>Grand Mobile Support Copilot<small>Админ-панель поддержки · ИИ-триаж, Telegram, OCR доказательств, Антифрод</small></div></div>
+    <div class="spacer"></div>
+    <div class="userbox">
+      <label for="userSelect">Пользователь (demo):</label>
+      <select id="userSelect" class="select" aria-describedby="demoNotice"></select>
+      <span id="roleBadge" class="b b-muted"></span>
     </div>
   </header>
-
-  <!-- Live Demo Ticker -->
-  <div class="wix-demo-ticker" id="demoNotice">
-    🛡️ DEMO MODE: Решение всегда остаётся за человеком. Никаких автоматических наказаний на основании подозрений ИИ не применяется.
+  <div class="demo-strip" id="demoNotice" role="note">
+    DEMO MODE: роль выбирается переключателем без аутентификации. Финальное решение всегда остаётся за человеком — никаких автоматических наказаний на основании подозрений ИИ не применяется.
   </div>
 
-  <!-- Main Content Container -->
-  <main class="wix-main-container" id="main" tabindex="-1"></main>
+  <nav class="sidebar" aria-label="Основное меню" id="sidebar"></nav>
 
-  <!-- Hidden backward-compat elements for legacy handlers -->
-  <nav class="sidebar" id="sidebar" style="display:none"></nav>
-
-  <!-- Wix Community Footer -->
-  <footer class="wix-footer">
-    <div class="wix-footer-inner">
-      <div class="wix-brand">
-        <div class="wix-brand-logo">GM</div>
-        <div>Grand Mobile AI<span class="wix-brand-dot">.</span></div>
-      </div>
-      <div class="wix-footer-links">
-        <a href="#overview">Home</a>
-        <a href="#groups">Groups</a>
-        <a href="#feed">Complaints Feed</a>
-        <a href="#rules">Site Rules</a>
-        <a href="#members">Members</a>
-        <a href="#contact">Contact & Telegram</a>
-      </div>
-      <div class="wix-footer-copy">
-        © 2026 Grand Mobile AI Support. All rights reserved. Powered and secured by Grand Copilot Engine.
-      </div>
-    </div>
-  </footer>
+  <main class="main" id="main" tabindex="-1"></main>
 </div>
 
 <div class="modal-bg" id="modalBg" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -710,6 +358,7 @@ tr.sel td { background: rgba(245, 158, 11, 0.08); border-left: 2px solid var(--a
   </form>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
+
 <script>
 /* ===================== Utilities ===================== */
 const ICONS = {
@@ -845,33 +494,14 @@ const NAV = [
 let navCounts={};
 function renderNav(route){
   const senior = S.user && S.user.role==='senior_admin';
-  // Highlight Wix Topbar items
-  document.querySelectorAll('#wixNav .wix-nav-item').forEach(el => {
-    const page = el.dataset.page;
-    if(page) {
-      const match = (page === route) || (page === 'feed' && ['feed','junior','queue','mine','senior','admin-calls'].includes(route));
-      el.classList.toggle('active', match);
-    }
-  });
-
-  // User avatar initials
-  if(S.user && $('#wixAvatar')) {
-    const parts = (S.user.name||'AD').split(' ');
-    $('#wixAvatar') && ($('#wixAvatar').textContent = parts.map(p=>p[0]).join('').slice(0,2).toUpperCase());
-    if($('#shiftUserTag')) $('#shiftUserTag').textContent = `SHIFT: ${S.user.name.toUpperCase()} [${S.user.role==='senior_admin'?'SR':'JR'}]`;
-  }
-
-  // Legacy sidebar if present
-  if($('#sidebar')) {
-    $('#sidebar').innerHTML = NAV.map(n=>{
-      if(n.sep) return '<div class="nav-sep" role="separator"></div>';
-      if(n.seniorOnly && !senior) return '';
-      let tail='';
-      if(n.senior && !senior) tail='<span class="lock" title="Только для старшего администратора">'+ic('lock')+'</span>';
-      else if(n.count && navCounts[n.count]!==undefined) tail=`<span class="count ${n.hot&&navCounts[n.count]>0?'hot':''}">${navCounts[n.count]}</span>`;
-      return `<a href="#${n.id}" class="nav-link ${route===n.id?'active':''}" ${route===n.id?'aria-current="page"':''}>${ic(n.icon)}<span>${n.label}</span>${tail}</a>`;
-    }).join('');
-  }
+  $('#sidebar').innerHTML = NAV.map(n=>{
+    if(n.sep) return '<div class="nav-sep" role="separator"></div>';
+    if(n.seniorOnly && !senior) return '';
+    let tail='';
+    if(n.senior && !senior) tail='<span class="lock" title="Только для старшего администратора">'+ic('lock')+'</span>';
+    else if(n.count && navCounts[n.count]!==undefined) tail=`<span class="count ${n.hot&&navCounts[n.count]>0?'hot':''}">${navCounts[n.count]}</span>`;
+    return `<a href="#${n.id}" class="nav-link ${route===n.id?'active':''}" ${route===n.id?'aria-current="page"':''}>${ic(n.icon)}<span>${n.label}</span>${tail}</a>`;
+  }).join('');
 }
 async function refreshCounts(){
   try{ navCounts = await api('GET','/api/ws/analytics'); }catch(_){ navCounts={}; }
@@ -880,203 +510,7 @@ async function refreshCounts(){
 function currentRoute(){ const h=(location.hash||'#overview').slice(1).split('/'); return {page:h[0]||'overview', arg:h[1]?decodeURIComponent(h[1]):null}; }
 
 const PAGES = {};
-
-/* ===================== Wix Dropdown & Modals ===================== */
-document.addEventListener('click', (e) => {
-  const drop = $('#wixMoreDropdown');
-  if(!drop) return;
-  if(drop.contains(e.target)) {
-    if(e.target.closest('#wixMoreBtn')) {
-      drop.classList.toggle('open');
-    }
-  } else {
-    drop.classList.remove('open');
-  }
-});
-
-function openNewComplaintModal(){
-  const body = `
-    <div class="stack" style="gap:12px">
-      <div>
-        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:4px">Никнейм игрока:</label>
-        <input name="nickname" class="input" style="width:100%" placeholder="Например: Player_Dias" required />
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:4px">ID аккаунта:</label>
-          <input name="account_id" type="number" class="input" style="width:100%" placeholder="10423" value="10423" required />
-        </div>
-        <div>
-          <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:4px">Сервер (1-30):</label>
-          <input name="server_id" type="number" class="input" style="width:100%" min="1" max="30" value="5" required />
-        </div>
-      </div>
-      <div>
-        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:4px">Язык обращения:</label>
-        <select name="language" class="select" style="width:100%">
-          <option value="ru">Русский (RU)</option>
-          <option value="kk">Казахский (KK)</option>
-          <option value="uz">Узбекский (UZ)</option>
-          <option value="en">Английский (EN)</option>
-        </select>
-      </div>
-      <div>
-        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:4px">Текст жалобы / ситуации:</label>
-        <textarea name="text" class="input" style="width:100%;height:100px;border-radius:12px" placeholder="Опишите нарушение (например: Игрок оскорбил родных в голосовом чате на автобазаре / ДМ без причины)" required></textarea>
-      </div>
-      <div>
-        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:4px">Ссылка на доказательства (скриншот/видео):</label>
-        <input name="evidence_url" class="input" style="width:100%" placeholder="https://imgur.com/evidence_screenshot.jpg" value="https://imgur.com/evidence_screenshot.jpg" />
-      </div>
-    </div>
-  `;
-  openModal({
-    title: 'Подать новую жалобу (ИИ Авто-триаж)',
-    body,
-    submit: '⚡ Запустить триаж ИИ',
-    kind: 'primary',
-    onSubmit: async (fd) => {
-      const nick = fd.get('nickname');
-      const accId = parseInt(fd.get('account_id')) || 10001;
-      const serverId = parseInt(fd.get('server_id')) || 1;
-      const lang = fd.get('language') || 'ru';
-      const text = fd.get('text');
-      const ev = fd.get('evidence_url');
-
-      const payload = {
-        complaint_id: 'c_' + Date.now().toString(36),
-        raw_text: text,
-        player: { account_id: accId, nickname: nick, server_id: serverId },
-        evidence: ev ? [{ type: 'screenshot', url: ev }] : [],
-        meta: { language: lang }
-      };
-
-      const res = await api('POST', '/api/triage', payload);
-      toast(`✅ Жалоба обработана ИИ! Категория: ${res.ticket.category}, Приоритет: ${res.ticket.priority}`);
-      await refreshCounts();
-      location.hash = `#junior/${encodeURIComponent(res.ticket.id)}`;
-    }
-  });
-}
-
-document.addEventListener('click', (e) => {
-  if(e.target.closest('#btnNewComplaint') || e.target.closest('#heroBtnNewTicket')) {
-    openNewComplaintModal();
-  }
-});
-
-/* ===================== Wix Pages ===================== */
-PAGES.groups = async (main) => {
-  const [a] = await Promise.all([api('GET', '/api/ws/analytics')]);
-  const cats = [
-    { id: 'rp_violation', title: 'RP Violations (DM / DB / PG / MG)', desc: 'Нарушения правил ролевой игры, срыв RP ситуаций, убийства без причины (DM) и таран авто (DB).', icon: '⚔️', rules: '3.1, 3.2, 3.4', count: a.by_category['rp_violation'] || 0 },
-    { id: 'insult_toxicity', title: 'Toxicity & Insults (Chat & Voice)', desc: 'Неадекватное поведение, оскорбления в чатах, нецензурная лексика, затрагивание родных.', icon: '🤬', rules: '2.1, 2.2', count: a.by_category['insult_toxicity'] || 0 },
-    { id: 'cheating_exploits', title: 'Cheats & Exploits (SpeedHack / AIM)', desc: 'Использование стороннего софта, ботоводство, распространение читов и использование багов игры.', icon: '⚡', rules: '5.1, 5.2', count: a.by_category['cheating_exploits'] || 0 },
-    { id: 'billing_refund', title: 'Billing & Refunds (Donations / Loss)', desc: 'Проблемы с начислением Grand Coins, покупками в донат-магазине и компенсацией пропавших предметов.', icon: '💎', rules: '6.1, 6.2', count: a.by_category['billing_refund'] || 0 },
-    { id: 'ban_appeal', title: 'Ban Appeals & Sanctions', desc: 'Обжалование блокировок аккаунтов, предупреждений (Warn), деморгана и заявки на амнистию.', icon: '⚖️', rules: '7.1, 7.2', count: a.by_category['ban_appeal'] || 0 },
-    { id: 'gameplay_question', title: 'Gameplay & Beginners FAQ', desc: 'Вопросы по игровому процессу, командам, организациям, заработку и помощи новичкам.', icon: '❓', rules: '8.1, 8.2', count: a.by_category['gameplay_question'] || 0 },
-  ];
-
-  main.innerHTML = `
-    <div class="page-head">
-      <div>
-        <div class="wix-hero-badge">COMMUNITY HUBS</div>
-        <h1>Groups & Categories</h1>
-        <p>Explore your forum groups below to see what you can do, or inspect active complaints & rules.</p>
-      </div>
-      <div>
-        <button type="button" class="wix-pill-primary" onclick="openNewComplaintModal()">+ Создать жалобу</button>
-      </div>
-    </div>
-    
-    <div class="filters">
-      <input id="grpSearch" class="input" placeholder="Поиск по группам, правилам и категориям…" />
-    </div>
-
-    <div class="wix-groups-grid" id="grpGrid">
-      ${cats.map(c => `
-        <div class="wix-group-card" data-title="${esc(c.title)} ${esc(c.desc)}">
-          <div>
-            <div class="wix-group-head">
-              <div class="wix-group-icon">${c.icon}</div>
-              <span class="wix-group-badge">Правила ${c.rules}</span>
-            </div>
-            <h3 class="wix-group-title">${esc(c.title)}</h3>
-            <p class="wix-group-desc">${esc(c.desc)}</p>
-          </div>
-          <div class="wix-group-foot">
-            <span class="small muted">Жалоб: <b style="color:#fff">${c.count}</b></span>
-            <a href="#junior" class="btn sm primary" onclick="setTimeout(()=>{ $('#fcategory') && ($('#fcategory').value='${c.id}', $('#fcategory').dispatchEvent(new Event('change'))); }, 100)">Открыть ленту →</a>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-
-  $('#grpSearch').addEventListener('input', (e) => {
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#grpGrid .wix-group-card').forEach(el => {
-      el.style.display = el.dataset.title.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
-};
-
-PAGES.feed = (m, a) => listPage(m, a, {
-  page: 'feed',
-  scope: 'all',
-  title: 'Complaints Feed',
-  subtitle: 'Лента обсуждений и обращений игроков в стиле Wix Community Forum.',
-  caption: 'Все жалобы и тикеты'
-});
-
-PAGES.members = async (main) => {
-  const [a] = await Promise.all([api('GET', '/api/ws/analytics')]);
-  const team = a.team || [
-    { name: 'Admin Dias', role: 'senior_admin', open: 3, resolved: 48, status: 'online', server: 'Сервер 5' },
-    { name: 'Admin Alikhan', role: 'junior_admin', open: 5, resolved: 36, status: 'online', server: 'Сервер 5' },
-    { name: 'Admin Ilya', role: 'junior_admin', open: 2, resolved: 29, status: 'offline', server: 'Сервер 3' },
-    { name: 'AI Copilot Bot', role: 'assistant', open: 0, resolved: a.auto_handled_count || 120, status: 'online', server: 'Все сервера' }
-  ];
-
-  main.innerHTML = `
-    <div class="page-head">
-      <div>
-        <div class="wix-hero-badge">MODERATION TEAM</div>
-        <h1>Forum Members & Staff</h1>
-        <p>Администраторы, модераторы и ИИ-ассистенты Grand Mobile AI Support.</p>
-      </div>
-    </div>
-
-    <div class="wix-members-grid">
-      ${team.map(m => {
-        const initials = m.name.split(' ').map(x=>x[0]).join('').slice(0, 2);
-        const isOnline = m.status === 'online' || m.role === 'assistant';
-        return `
-          <div class="wix-member-card">
-            <div class="wix-member-avatar">${esc(initials)}</div>
-            <h3 class="wix-member-name">${esc(m.name)}</h3>
-            <div class="wix-member-role">${m.role==='senior_admin'?'Старший администратор':(m.role==='assistant'?'AI Autonomous Agent':'Младший модератор')}</div>
-            <div style="margin-bottom:14px">
-              <span class="b ${isOnline?'b-auto':'b-muted'}">${isOnline?'● Online':'○ Offline'}</span>
-            </div>
-            <div class="wix-member-stats">
-              <div><b>${m.open||0}</b>В работе</div>
-              <div><b>${m.resolved||0}</b>Закрыто</div>
-              <div><b>${esc(m.server||'1-30')}</b>Сервер</div>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
-  `;
-};
-
-PAGES.contact = async (main) => {
-  await PAGES.telegram(main);
-};
-
 async function router(){
-
   const {page,arg}=currentRoute();
   renderNav(page);
   const main=$('#main'); main.innerHTML=loadingHTML();
@@ -1500,153 +934,35 @@ PAGES.overview=async(main)=>{
   const attention=att.tickets.filter(r=>!['resolved','closed'].includes(r.status)).slice(0,8);
   const eff=a.ai_effectiveness||{};
   const stat=(v,l,href,cls='')=>`<div class="stat ${cls}"><a href="${href}"><div class="v">${v}</div><div class="l">${l}</div></a></div>`;
-  
-  main.innerHTML=`
-    <!-- Main Hero Section (Asymmetric Editorial Broadsheet) -->
-    <div class="hero-broadsheet">
-      <!-- Top Section Ticker: Analog Stamp & Running Metadata -->
-      <div class="ticker-bar">
-        <div class="ticker-left">
-          <span class="stamp-badge">CONFIDENTIAL // DISPATCH MODE</span>
-          <span class="ticker-meta">SERVERS: 01–30 ONLINE</span>
-        </div>
-        <div class="ticker-right">
-          <span>AI THRESHOLD: <strong>85.0%</strong></span>
-          <span>QUEUE LATENCY: <strong style="color:var(--accent)">~42MS</strong></span>
-        </div>
-      </div>
-
-      <!-- Asymmetric Grid: 8 Cols Display / 4 Cols Technical Index -->
-      <div class="hero-split">
-        <div class="hero-main">
-          <h1 class="hero-editorial-title">
-            Life is far too brief <br>
-            <span class="italic text-muted">— to wait for</span> 
-            <span class="hero-accent">triage.</span>
-          </h1>
-
-          <div class="hero-quote">
-            <p>
-              Autonomous player intelligence for Grand Mobile RP. Zero guesswork, zero automated false bans. 
-              Real-time multi-dialect understanding, optical timestamp OCR with /time, and direct escalations to senior administration.
-            </p>
-            <div class="quote-footnote">
-              REGULATION 01–08 // STRICT HUMAN-VERIFIED SANCTIONS ONLY
-            </div>
-          </div>
-
-          <div class="hero-actions">
-            <button type="button" class="btn-brutal-primary" id="heroBtnNewTicket">
-              <span>Launch Instant Triage</span>
-              <span style="font-weight:900">→</span>
-            </button>
-            <a href="#rules" class="btn-brutal-white">Inspect Codex [01–08]</a>
-            <a href="#groups" class="btn-brutal-link">Browse Violation Groups ↓</a>
-          </div>
-        </div>
-
-        <div class="hero-terminal">
-          <div class="terminal-head">
-            <span class="terminal-title">[ TERMINAL METRICS ]</span>
-            <span class="terminal-sync">LIVE SYNC</span>
-          </div>
-
-          <div class="metric-row">
-            <div class="metric-top">
-              <span class="metric-lbl">Auto-Handled Rate</span>
-              <span class="metric-val" style="color:var(--accent)">${eff.auto_handled_rate_pct||85.4}%</span>
-            </div>
-            <p class="metric-desc">Gameplay inquiries and non-punitive questions cleared without human load.</p>
-          </div>
-
-          <div class="metric-row">
-            <div class="metric-top">
-              <span class="metric-lbl">Mean Time to Decision</span>
-              <span class="metric-val">${a.processing.avg_processing_time_ms||42}ms</span>
-            </div>
-            <p class="metric-desc">Neural inference, multilingual parsing (RU/KK/UZ/EN), and rule citation.</p>
-          </div>
-
-          <div class="metric-row">
-            <div class="metric-top">
-              <span class="metric-lbl">Fraud & Spam Blocked</span>
-              <span class="metric-val">100%</span>
-            </div>
-            <p class="metric-desc">Duplicate tickets, fake /time timestamps, and contradiction heuristics.</p>
-          </div>
-
-          <div class="terminal-foot">
-            <div style="color:var(--accent);font-weight:700">TELEGRAM OUTBOX: ACTIVE</div>
-            <div>NOTIFICATIONS SENT: ${eff.telegram_notifications_sent||0} MSG</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Lower Footnote Wireframe Row -->
-      <div class="hero-footnote-grid">
-        <div>
-          <span class="footnote-tag">01. Non-RP & DM</span>
-          <span class="footnote-sub">Rule 3.1 & 3.4 video /time verification</span>
-        </div>
-        <div>
-          <span class="footnote-tag">02. Chat Toxicity</span>
-          <span class="footnote-sub">Rule 2.1 zero-tolerance language filter</span>
-        </div>
-        <div>
-          <span class="footnote-tag">03. Software Exploits</span>
-          <span class="footnote-sub">Rule 5.1 immediate senior escalation</span>
-        </div>
-        <div>
-          <span class="footnote-tag">04. Billing Claims</span>
-          <span class="footnote-sub">Rule 6.1 Grand Coins transaction audit</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Live Metrics Strip -->
+  main.innerHTML=`<div class="page-head"><div><h1>Обзор Dashboard</h1><p>${esc(S.user.name)} · ${esc(S.user.role_label)} · Полная сводка обращений и эффективности ИИ</p></div>
+    <div class="actions"><a class="btn primary" href="#assistant">${ic('assistant')}AI Admin Assistant</a><a class="btn" href="#telegram">${ic('send')}Telegram-бот</a><a class="btn" href="#evidence">${ic('camera')}Проверка доказательств</a></div></div>
     <div class="stats">
-      ${stat(a.visible_total,'[TOTAL] Все обращения','#feed')}
-      ${stat(a.queue_unassigned,'[QUEUE] Очередь репортов','#queue',a.queue_unassigned>0?'hot':'')}
-      ${stat(a.auto_handled_count||0,'[AI AUTO] Обработано ИИ','#feed','ok')}
-      ${stat(a.admin_escalated_count||0,'[ESCALATED] Старшей администрации','#feed')}
-      ${stat(a.direct_admin_calls_total||0,`[SOS] Вызовы (ждут: ${a.direct_admin_calls_waiting||0})`,'#admin-calls',(a.direct_admin_calls_waiting||0)>0?'hot':'')}
-      ${stat(a.suspicious_complaints_count||0,'[FRAUD] Подозрительные','#fraud',(a.suspicious_complaints_count||0)>0?'hot':'')}
-      ${stat(a.repeat_offenders_count||0,'[REC] Рецидивисты','#offenders')}
-      ${stat((eff.avg_confidence_pct||0)+'%','[CONF] Средний Confidence','#analytics','ok')}
+      ${stat(a.visible_total,'Всего обращений','#junior')}
+      ${stat(a.queue_unassigned,'Очередь ожидающих жалоб','#queue',a.queue_unassigned>0?'hot':'')}
+      ${stat(a.auto_handled_count||0,'Обработано ИИ автоматически','#junior','ok')}
+      ${stat(a.admin_escalated_count||0,'Передано администрации','#junior')}
+      ${stat(a.direct_admin_calls_total||0,`Прямые вызовы админа (ждут: ${a.direct_admin_calls_waiting||0})`,'#admin-calls',(a.direct_admin_calls_waiting||0)>0?'hot':'')}
+      ${stat(a.suspicious_complaints_count||0,'Подозрительные жалобы (Антифрод)','#fraud',(a.suspicious_complaints_count||0)>0?'hot':'')}
+      ${stat(a.repeat_offenders_count||0,'Повторные нарушители','#offenders')}
+      ${stat((eff.avg_confidence_pct||0)+'%','Средний Confidence Score ИИ','#analytics','ok')}
     </div>
-
-    <!-- Grid: Active Case Reviews & Telemetry -->
     <div class="grid2">
-      <section class="card">
-        <h2>Обращения, требующие модерации <a class="small" href="#feed" style="font-family:var(--font-mono)">[Смотреть все →]</a></h2>
-        ${attention.length?`<div class="stack">${attention.map(r=>`<a href="#junior/${encodeURIComponent(r.id)}" class="msg">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <b style="font-family:var(--font-mono);color:#fff">${esc(r.id)}</b> 
-            ${prioB(r.priority)} ${statusB(r.status,r.status_label)} 
-            ${r.subcategory_name?`<span class="b b-subcat">${esc(r.subcategory_name)}</span>`:''} 
-            ${r.needs_human?'<span class="b b-human">👨‍💻 Нужен админ</span>':'<span class="b b-auto">🤖 ИИ Авто</span>'}
-          </div>
-          <div style="font-size:0.86rem;color:var(--text2);margin:4px 0">${esc(r.snippet)}</div>
-          <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted)">${esc(r.category_name)} · Confidence ${r.confidence_pct||Math.round((r.confidence||0)*100)}% · ${esc(r.assignee_name||'не назначен')}</div>
-        </a>`).join('')}`:'<div class="card empty">Открытых обращений нет.</div>'}
+      <section class="card"><h2>Требуют внимания администрации <a class="small" href="#junior">все →</a></h2>
+        ${attention.length?`<div class="stack">${attention.map(r=>`<a href="#junior/${encodeURIComponent(r.id)}" class="msg" style="display:block;color:inherit">
+          <div class="t-head" style="margin-bottom:2px"><b style="font-family:monospace">${esc(r.id)}</b>${prioB(r.priority)}${statusB(r.status,r.status_label)}${r.subcategory_name?`<span class="b b-subcat">${esc(r.subcategory_name)}</span>`:''}${r.needs_human?'<span class="b b-human">Нужен человек</span>':'<span class="b b-auto">ИИ Авто</span>'}</div>
+          <div class="small muted">${esc(r.category_name)} · Confidence ${r.confidence_pct||Math.round((r.confidence||0)*100)}% · ${esc(r.assignee_name||'не назначен')}</div></a>`).join('')}</div>`:'<div class="empty">Открытых обращений нет.</div>'}
       </section>
-
-      <section class="card">
-        <h2>Телеметрия ИИ & Telegram <a class="small" href="#analytics" style="font-family:var(--font-mono)">[Аналитика →]</a></h2>
-        <div class="kv" style="margin-bottom:14px">
-          <div><span>Доля автоматизации ИИ</span><b>${eff.auto_handled_rate_pct||0}%</b></div>
-          <div><span>Точность классификации</span><b>${eff.feedback_accuracy_pct!=null?eff.feedback_accuracy_pct+'%':'100%'}</b></div>
-          <div><span>Уведомлений в Telegram</span><b>${eff.telegram_notifications_sent||0} MSG</b></div>
-          <div><span>Среднее время инференса</span><b>${a.processing.avg_processing_time_ms||42} мс</b></div>
+      <section class="card"><h2>Эффективность ИИ и последние действия <a class="small" href="#analytics">аналитика →</a></h2>
+        <div class="kv" style="margin-bottom:12px">
+          <div><span>Доля авто-обработки ИИ</span><b>${eff.auto_handled_rate_pct||0}%</b></div>
+          <div><span>Точность по Feedback Loop</span><b>${eff.feedback_accuracy_pct!=null?eff.feedback_accuracy_pct+'%':'100%'} (оценок: ${eff.feedback_total||0})</b></div>
+          <div><span>Telegram-уведомлений</span><b>${eff.telegram_notifications_sent||0} отправлено</b></div>
+          <div><span>Среднее / p95 время триажа</span><b>${a.processing.avg_processing_time_ms} / ${a.processing.p95_processing_time_ms} мс</b></div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-          <a class="btn sm primary" href="#assistant">⚡ AI Assistant</a>
-          <a class="btn sm" href="#contact">✈️ Telegram API</a>
-          <a class="btn sm" href="#evidence">📷 OCR Доказательств</a>
-        </div>
+        <h3>Журнал активности <a class="small" href="#audit">весь →</a></h3>
+        ${historyHTML(aud.entries.slice().reverse())}
       </section>
-    </div>
-  `;
+    </div>`;
 };
 
 /* ===================== 1. Telegram Notifications Page ===================== */
@@ -2133,34 +1449,14 @@ PAGES.assistant=async(main,arg)=>{
 /* ===================== Rules ===================== */
 PAGES.rules=async(main)=>{
   const d=await api('GET','/api/ws/rules');
-  main.innerHTML=`<div class="page-head">
-      <div>
-        <div class="wix-hero-badge">SERVER REGULATIONS</div>
-        <h1>Site Rules & Guidelines</h1>
-        <p>Explore your forum guidelines below to see regulations, prohibited actions & penalty standards. Источник: ${esc(d.source)} · ${d.count} регламентов.</p>
-      </div>
-    </div>
-    <div class="filters">
-      <input id="rq" class="input" placeholder="Поиск по номеру, названию, тексту правила… (нажмите / для фокуса)" />
-      <select id="rc" class="select" aria-label="Категория">
-        <option value="">Все категории</option>
-        ${S.meta.categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}
-      </select>
-    </div>
-    <div id="rList" class="wix-rules-grid"></div>`;
+  main.innerHTML=`<div class="page-head"><div><h1>База правил Grand Mobile</h1><p>Источник: ${esc(d.source)} · ${d.count} пунктов · только чтение.</p></div></div>
+    <div class="filters"><input id="rq" class="input" placeholder="Поиск по ID, заголовку, тексту… ( / )"><select id="rc" class="select" aria-label="Категория"><option value="">Все категории</option>${S.meta.categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
+    <div id="rList" class="stack"></div>`;
   const render=()=>{
     const q=$('#rq').value.toLowerCase().trim(), c=$('#rc').value;
     const rows=d.rules.filter(r=>(!c||r.category===c)&&(!q||(r.id+' '+r.title+' '+r.text+' '+r.section).toLowerCase().includes(q)));
-    $('#rList').innerHTML=rows.length?rows.map((r, idx)=>{
-      const num = String(idx + 1).padStart(2, '0');
-      return `<div class="wix-rule-card">
-        <div class="wix-rule-num">${num}</div>
-        <div style="margin-bottom:8px"><span class="b b-cat">${esc(catName(r.category))}</span> <span class="b b-muted">п. ${esc(r.id)}</span></div>
-        <h3 class="wix-rule-title">${esc(r.title)}</h3>
-        <p class="wix-rule-text">${esc(r.text)}</p>
-        <div class="wix-rule-punishment">⚖️ Регламент наказания: ${esc(r.punishment)}</div>
-      </div>`;
-    }).join(''):'<div class="card empty">Ничего не найдено.</div>';
+    $('#rList').innerHTML=rows.length?rows.map(r=>`<div class="rule"><div class="rh"><span><span class="rid">п. ${esc(r.id)}</span> <b>${esc(r.title)}</b></span><span class="b b-cat">${esc(catName(r.category))}</span></div>
+      <div class="small muted">${esc(r.section)}</div><q>${esc(r.text)}</q><div class="pun">Регламент: ${esc(r.punishment)}</div></div>`).join(''):'<div class="card empty">Ничего не найдено.</div>';
   };
   $('#rq').addEventListener('input',render); $('#rc').addEventListener('change',render); render();
 };
