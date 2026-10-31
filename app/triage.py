@@ -130,6 +130,155 @@ class TriageService:
             top_k=3,
         )
 
+        # Grounding guarantees for official complaint categories
+        lower_txt = combined_player_text.lower()
+        if category in ("complaint.insult", "insult_toxicity"):
+            if self.rag.is_valid_rule_id("2.1") and not any(r.id == "2.1" for r in cited_rules):
+                r_ins = self.rag.rules_by_id["2.1"]
+                cited_rules.insert(
+                    0,
+                    CitedRule(
+                        id="2.1",
+                        section=r_ins.section,
+                        title=r_ins.title,
+                        quote=r_ins.text,
+                        punishment=r_ins.punishment,
+                        relevance_score=0.92,
+                    ),
+                )
+        elif category in ("complaint.dm", "rp_violation"):
+            gz_detected = any(
+                gz_w in lower_txt
+                for gz_w in (
+                    "зз", "gz", "зелен", "зелён", "больниц", "автосалон", "авторынок",
+                    "вокзал", "банк", "мэри", "правительств", "автошкол", "казино", "цб", "спавн"
+                )
+            )
+            gz_rule = "GZ 1.1" if self.rag.is_valid_rule_id("GZ 1.1") else "GZ"
+            if gz_detected and self.rag.is_valid_rule_id(gz_rule) and not any(r.id == gz_rule for r in cited_rules):
+                r_gz = self.rag.rules_by_id[gz_rule]
+                cited_rules.insert(
+                    0,
+                    CitedRule(
+                        id=gz_rule,
+                        section=r_gz.section,
+                        title=r_gz.title,
+                        quote=r_gz.text,
+                        punishment=r_gz.punishment,
+                        relevance_score=0.94,
+                    ),
+                )
+            elif not any(r.id in ("5.4", "5.3", "GZ 1.1", "GZ") for r in cited_rules):
+                for dm_id in ("5.4", "5.3"):
+                    if self.rag.is_valid_rule_id(dm_id):
+                        r_dm = self.rag.rules_by_id[dm_id]
+                        cited_rules.insert(
+                            0,
+                            CitedRule(
+                                id=dm_id,
+                                section=r_dm.section,
+                                title=r_dm.title,
+                                quote=r_dm.text,
+                                punishment=r_dm.punishment,
+                                relevance_score=0.88,
+                            ),
+                        )
+                        break
+        elif category in ("complaint.cheat", "cheating_exploits"):
+            if self.rag.is_valid_rule_id("5.2") and not any(r.id == "5.2" for r in cited_rules):
+                r_ch = self.rag.rules_by_id["5.2"]
+                cited_rules.insert(
+                    0,
+                    CitedRule(
+                        id="5.2",
+                        section=r_ch.section,
+                        title=r_ch.title,
+                        quote=r_ch.text,
+                        punishment=r_ch.punishment,
+                        relevance_score=0.95,
+                    ),
+                )
+        elif category in ("complaint.scam", "scam_fraud"):
+            if self.rag.is_valid_rule_id("4.1") and not any(r.id == "4.1" for r in cited_rules):
+                r_sc = self.rag.rules_by_id["4.1"]
+                cited_rules.insert(
+                    0,
+                    CitedRule(
+                        id="4.1",
+                        section=r_sc.section,
+                        title=r_sc.title,
+                        quote=r_sc.text,
+                        punishment=r_sc.punishment,
+                        relevance_score=0.92,
+                    ),
+                )
+        elif category in ("complaint.admin", "ban_appeal"):
+            if self.rag.is_valid_rule_id("3.4") and not any(r.id == "3.4" for r in cited_rules):
+                r_adm = self.rag.rules_by_id["3.4"]
+                cited_rules.insert(
+                    0,
+                    CitedRule(
+                        id="3.4",
+                        section=r_adm.section,
+                        title=r_adm.title,
+                        quote=r_adm.text,
+                        punishment=r_adm.punishment,
+                        relevance_score=0.95,
+                    ),
+                )
+        elif category == "complaint.rmt_ads":
+            for rmt_id in ("2.3", "4.4"):
+                if self.rag.is_valid_rule_id(rmt_id) and not any(r.id == rmt_id for r in cited_rules):
+                    r_rmt = self.rag.rules_by_id[rmt_id]
+                    cited_rules.insert(
+                        0,
+                        CitedRule(
+                            id=rmt_id,
+                            section=r_rmt.section,
+                            title=r_rmt.title,
+                            quote=r_rmt.text,
+                            punishment=r_rmt.punishment,
+                            relevance_score=0.90,
+                        ),
+                    )
+                    break
+        elif category in ("report.account", "account_recovery"):
+            if self.rag.is_valid_rule_id("1.4") and not any(r.id == "1.4" for r in cited_rules):
+                r_acc = self.rag.rules_by_id["1.4"]
+                cited_rules.insert(
+                    0,
+                    CitedRule(
+                        id="1.4",
+                        section=r_acc.section,
+                        title=r_acc.title,
+                        quote=r_acc.text,
+                        punishment=r_acc.punishment,
+                        relevance_score=0.88,
+                    ),
+                )
+        elif category in ("report.question", "gameplay_question"):
+            # Pure gameplay questions (no rules or penalties asked) do not carry punitive citations
+            is_rule_inquiry = bool(
+                facts.mentioned_rules
+                or facts.rule_refs_raw
+                or any(
+                    w in lower_txt
+                    for w in (
+                        "правил", "регламент", "наказан", "бан", "варн", "деморган", "мут",
+                        "разрешено ли", "запрещено ли", "ереже", "жаза", "qoida", "jazo", "punish", "rule"
+                    )
+                )
+            )
+            if not is_rule_inquiry:
+                cited_rules = []
+                has_reliable_rule = False
+        elif category in ("report.help", "technical_bug"):
+            # Stuck players or bug reports should not be cited for report misuse (3.1)
+            is_rule_inquiry = bool(facts.mentioned_rules or facts.rule_refs_raw)
+            if not is_rule_inquiry:
+                cited_rules = []
+                has_reliable_rule = False
+
         # If complaint has insufficient evidence, include complaint evidence rule ("ЖБ 1.2.2" or "ЖБ 1.1.2" or legacy "7.2")
         complaint_cats = {
             "complaint.insult", "complaint.dm", "complaint.scam", "complaint.cheat",
