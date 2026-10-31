@@ -514,7 +514,7 @@ function filtersHTML(opts={}){
   return `<div class="filters" role="search">
     <label class="sr-only" for="fq">Поиск</label>
     <input id="fq" class="input" placeholder="Поиск по ID, тексту, нику, категории… ( / )" />
-    <select id="fstatus" class="select" aria-label="Статус">${opt('','Все статусы')}${Object.entries(m.statuses).map(([k,v])=>opt(k,v)).join('')}</select>
+    <select id="fstatus" class="select" aria-label="Статус">${opt('','Все статусы')}${opt('unassigned','В очереди без исполнителя')}${Object.entries(m.statuses).map(([k,v])=>opt(k,v)).join('')}</select>
     <select id="fcategory" class="select" aria-label="Категория">${opt('','Все категории')}${m.categories.map(c=>opt(c.id,c.name)).join('')}</select>
     <select id="fpriority" class="select" aria-label="Приоритет">${opt('','Все приоритеты')}${m.priorities.map(p=>opt(p,PRIO[p]||p)).join('')}</select>
     <select id="flanguage" class="select" aria-label="Язык">${opt('','Все языки')}${m.languages.map(l=>opt(l,l.toUpperCase()+' — '+LANGS[l])).join('')}</select>
@@ -953,7 +953,7 @@ async function listPage(main, arg, cfg){
 }
 
 PAGES.mine=(m,a)=>listPage(m,a,{page:'mine',scope:'mine',title:'Мои обращения',subtitle:'Тикеты, назначенные на вас.',caption:'Мои обращения',filters:{assignee:false}});
-PAGES.queue=(m,a)=>listPage(m,a,{page:'queue',scope:'queue',title:'Очередь репортов',subtitle:'Новые и возвращённые обращения без исполнителя.',caption:'Очередь без исполнителя'});
+PAGES.queue=(m,a)=>listPage(m,a,{page:'queue',scope:'all',title:'Очередь репортов',subtitle:'Все обращения и репорты игроков в очереди поддержки.',caption:'Очередь репортов'});
 PAGES.junior=(m,a)=>listPage(m,a,{page:'junior',scope:'all',title:'Рабочее место администратора',
   subtitle: S.user.role==='senior_admin'?'Все обращения команды, включая работу младших администраторов.':'Ваши обращения и разрешённая общая очередь.',caption:'Список обращений'});
 

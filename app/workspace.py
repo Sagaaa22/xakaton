@@ -644,18 +644,34 @@ def create_router(store: WorkspaceStore) -> APIRouter:
     ):
         if scope == "escalations":
             require_senior(user)
+        if status in ("all", ""):
+            status = None
+
         with store.lock:
             items = [t for t in store.tickets.values() if store.can_view(user, t)]
             if scope == "mine":
                 items = [t for t in items if t.get("assignee") == user["id"]]
             elif scope == "queue":
-                items = [t for t in items if t.get("assignee") is None and t["status"] in ("new", "returned")]
+                if status == "unassigned":
+                    items = [t for t in items if t.get("assignee") is None and t["status"] in ("new", "returned")]
+                elif status:
+                    items = [t for t in items if t["status"] == status]
+                elif category or priority or language or q or assignee or escalated is not None or unread is not None or urgent is not None:
+                    # When category or other filters are applied with "Все статусы", search across all visible queue tickets
+                    pass
+                else:
+                    # Default queue without any filter: unassigned incoming and returned tickets
+                    items = [t for t in items if t.get("assignee") is None and t["status"] in ("new", "returned")]
             elif scope == "escalations":
                 items = [t for t in items if t["status"] == "escalated"]
             rows = [store.summary(t, user) for t in items]
 
         def f(rows, key, val):
             return [r for r in rows if r.get(key) == val] if val else rows
+
+        if status == "unassigned":
+            rows = [r for r in rows if not r.get("assignee")]
+            status = None
 
         rows = f(rows, "status", status)
         rows = f(rows, "category", category)
