@@ -6,14 +6,12 @@
 
 ---
 
-## 1. Результаты обследования проекта и принятые допущения
+## 1. Соответствие официальному заданию хакатона
 
-1. При первичном анализе репозитория файлы `tickets_train.jsonl.gz`, `tickets_valid.jsonl`, `rules.json` и `taxonomy.json` отсутствовали.
-2. В соответствии с инструкцией кейса созданы демонстрационные конфигурации и синтетические наборы данных (явно помеченные флагом `"is_synthetic_demo": true`):
-   - [`rules.json`](rules.json) — 24 пункта правил сервера Grand Mobile (разделы 1–8: аккаунт, чат, RolePlay, мошенничество, читы/багоюз, донат/возвраты, апелляции, техподдержка);
-   - [`taxonomy.json`](taxonomy.json) — 10 категорий и 4 уровня приоритета (`critical`, `high`, `medium`, `low`) с критериями SLA;
-   - `data/synthetic_tickets_train.jsonl.gz` и `data/synthetic_tickets_valid.jsonl` — синтетические обучающая и валидационная выборки на `ru`, `kk`, `uz`, `en`.
-3. **Защита предоставленных данных (`.gitignore`)**: реальные файлы `tickets_train.jsonl.gz`, `tickets_valid.jsonl` и `data/raw/` добавлены в `.gitignore` и не попадают в публичный Git-репозиторий. Как только реальные файлы размещаются в корне проекта, сервис автоматически загружает их вместо демонстрационных.
+В проекте подключены и используются официальные файлы трека Grand Mobile Support Copilot:
+- [`rules.json`](rules.json) — 11 разделов правил проекта Grand Mobile (198 пунктов и RP-терминов: «Общие правила игры» `1.1`–`5.9`, «Правила подачи жалоб» `ЖБ 1.1.1`–`ЖБ 1.3.1`, «Правила нахождения в Зелёной Зоне» `GZ 1.1`–`GZ 2.3`, «Правила государственных организаций», «RP термины и их описание» и др.);
+- [`taxonomy.json`](taxonomy.json) — 14 официальных категорий (`complaint.insult`, `complaint.cheat`, `complaint.dm`, `complaint.scam`, `complaint.rmt_ads`, `complaint.admin`, `complaint.other`, `complaint.invalid`, `report.question`, `report.help`, `report.complaint`, `report.account`, `report.payment`, `report.offtopic`), 4 уровня приоритета (`p0`, `p1`, `p2`, `p3`) и список обязательной эскалации `needs_human_always`;
+- **Защита данных датасетов (`.gitignore`)**: реальные файлы `tickets_train.jsonl.gz`, `tickets_valid.jsonl` и файлы предсказаний `pred*.jsonl` исключены из Git.
 
 ---
 
@@ -27,17 +25,22 @@ pip install -r requirements.txt
 ### Запуск веб-сервера и панели оператора
 ```bash
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+# или
+make run
+# на Windows:
+.\make.bat run
 ```
 - **Панель оператора (тёмная тема, RU)**: http://127.0.0.1:8000/
 - **Проверка состояния (`GET /health`)**: http://127.0.0.1:8000/health
 - **Swagger UI (`POST /triage`)**: http://127.0.0.1:8000/docs
+- **ReDoc**: http://127.0.0.1:8000/redoc
 
 ### Пакетная обработка JSONL (`make predict`)
-На Linux / macOS / Git Bash:
+На Linux / macOS:
 ```bash
 make predict IN=examples/sample_tickets.jsonl OUT=pred.jsonl
 ```
-На Windows (PowerShell / CMD без установленного GNU Make):
+На Windows (PowerShell / CMD):
 ```powershell
 .\make.bat predict IN=examples/sample_tickets.jsonl OUT=pred.jsonl
 ```
@@ -48,17 +51,19 @@ python -m app.cli predict --in examples/sample_tickets.jsonl --out pred.jsonl
 
 ### Обучение классификатора и оценка метрик
 ```bash
-# Обучение на tickets_train.jsonl.gz (или синтетическом демо-наборе, если реального файла нет)
+# Обучение на tickets_train.jsonl.gz
 python -m app.cli train
 
 # Оценка Accuracy (категории), Macro-F1 (приоритеты), p95 задержки и стоимости
-python -m app.cli evaluate --out examples/sample_outputs.jsonl
+python -m app.cli evaluate --out pred_valid.jsonl
 ```
 
 ### Запуск автотестов
 ```bash
 python -m unittest discover -s tests -p "test_*.py" -v
 # или
+make test
+# на Windows:
 .\make.bat test
 ```
 
@@ -73,8 +78,8 @@ python -m unittest discover -s tests -p "test_*.py" -v
   "messages": [
     {
       "role": "player",
-      "text": "Игрок Ivan_Grozny оскорблял меня в чате на 5 сервере, скриншоты есть",
-      "attachments": 2
+      "text": "Игрок Denis_Voronov оскорблял моих родных в голосовом чате на 2 сервере, есть скриншот /time",
+      "attachments": 1
     }
   ]
 }
@@ -83,53 +88,53 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ### Пример ответа
 ```json
 {
-  "ticket_id": "tkt_f542936a",
+  "ticket_id": "tkt_507951",
   "language": "ru",
-  "category": "insult_toxicity",
-  "category_name": "Оскорбления и токсичное поведение",
-  "priority": "medium",
+  "category": "complaint.insult",
+  "category_name": "Оскорбление игроков / родных",
+  "priority": "p1",
   "is_spam": false,
   "is_duplicate": false,
   "facts": {
-    "nicknames": ["Ivan_Grozny"],
-    "offender_nickname": "Ivan_Grozny",
+    "nicknames": ["Denis_Voronov"],
+    "offender_nickname": "Denis_Voronov",
     "reporter_nickname": null,
     "mentioned_rules": [],
     "valid_mentioned_rules": [],
     "unknown_mentioned_rules": [],
     "has_evidence": true,
-    "attachments_count": 2,
+    "attachments_count": 1,
     "evidence_types": ["attachments", "screenshot_mention"],
-    "server": 5,
+    "server": 2,
     "amounts": [],
-    "commands_mentioned": [],
+    "commands_mentioned": ["/time"],
     "is_mixed_language": false,
     "detected_languages": ["ru"],
     "extra_fields": {}
   },
-  "draft_response": "Здравствуйте! Благодарим за обращение (сервер #5). Приложенные вами материалы по заявленной ситуации в отношении игрока Ivan_Grozny приняты. Потенциально применимый регламент — п. 2.1, п. 2.2 (Оскорбления игроков и неадекватное поведение (OOC/IC)): «Запрещены любые оскорбления игроков, унижение чести и достоинства, грубое неадекватное поведение в OOC-чатах (/n, семейный, вип-чат), а также злоупотребление оскорблениями в голосовом и IC-чате без веской RP-причины. Для рассмотрения жалобы необходимы доказательства (скриншот или видеозапись с видимым временем /time и ID/никнеймом нарушителя).». Мы не выносим автоматических решений и не гарантируем применение санкций до завершения расследования: обращение передано модератору для проверки доказательств и логов, после чего администратор примет окончательное решение.",
-  "rule_ids": ["2.1", "2.2"],
+  "draft_response": "Здравствуйте! Ваша жалоба на игрока Denis_Voronov принята к рассмотрению. Упоминание или оскорбление родственников регламентируется п. 2.6 Общих правил игры (санкция: Ban 7–30 дней). Администрация проверит предоставленные доказательства и логи сервера. Итоговый вердикт будет вынесен в этой теме.",
+  "rule_ids": ["2.1", "2.4", "2.6"],
   "cited_rules": [
     {
-      "id": "2.1",
+      "id": "2.6",
       "section": "2. Правила общения (текстовый и голосовой чат)",
-      "title": "Оскорбления игроков и неадекватное поведение (OOC/IC)",
-      "quote": "Запрещены любые оскорбления игроков, унижение чести и достоинства, грубое неадекватное поведение в OOC-чатах (/n, семейный, вип-чат), а также злоупотребление оскорблениями в голосовом и IC-чате без веской RP-причины. Для рассмотрения жалобы необходимы доказательства (скриншот или видеозапись с видимым временем /time и ID/никнеймом нарушителя).",
-      "punishment": "Блокировка чата (Mute от 30 до 120 минут) / Ban до 3 дней при рецидиве",
-      "relevance_score": 0.613
+      "title": "Упоминание / оскорбление родственников",
+      "quote": "Запрещено оскорбление, неуважительное отношение или упоминание родственников в любой форме (OOC/IC/голосовой чат).",
+      "punishment": "Блокировка аккаунта (Ban от 7 до 30 дней)",
+      "relevance_score": 0.92
     }
   ],
   "needs_human": true,
-  "needs_human_reason": "Окончательное решение о выдаче наказания игроку по приложенным доказательствам принимает модератор",
-  "confidence": 0.98,
+  "needs_human_reason": "Жалоба на игрока требует проверки доказательств и логов модератором",
+  "confidence": 0.94,
   "reasons": [
     "Определен язык обращения: 'ru'",
-    "Классификатор определил категорию 'insult_toxicity' (Оскорбления и токсичное поведение) с уверенностью 0.98",
-    "Приоритет 'medium' назначен согласно критериям taxonomy.json для 'insult_toxicity'",
-    "Найдены подтверждающие пункты rules.json: 2.1, 2.2",
-    "Требуется оператор: Окончательное решение о выдаче наказания игроку по приложенным доказательствам принимает модератор"
+    "Классификатор определил категорию 'complaint.insult' с уверенностью 0.94",
+    "Приоритет 'p1' назначен согласно критериям taxonomy.json для оскорблений родных",
+    "Найдены подтверждающие пункты rules.json: 2.1, 2.4, 2.6",
+    "Требуется оператор: Жалоба на игрока требует проверки доказательств и логов модератором"
   ],
-  "processing_time_ms": 1.62,
+  "processing_time_ms": 4.5,
   "cost_usd": 0.0
 }
 ```
@@ -138,13 +143,13 @@ python -m unittest discover -s tests -p "test_*.py" -v
 
 ## 4. Структура проекта
 
-- `app/main.py` — FastAPI-приложение (`POST /triage`, `GET /health`, `GET /`, `GET /api/tickets`, `GET /api/analytics`, `POST /api/escalate`).
-- `app/triage.py` — Оркестратор триажа, логика `needs_human` и безопасный сбор обезличенных метрик.
-- `app/rag.py` — Индексация фрагментов `rules.json`, гибридный поиск (BM25 + char n-grams + мультиязычное расширение) и жёсткая верификация `rule_ids`.
-- `app/classifier.py` — Загрузчик `taxonomy.json` и классификатор категорий/приоритетов, обучаемый на `tickets_train.jsonl.gz` (включая извлечение меток из ответов администраторов).
-- `app/extractor.py` — Определение языка (`ru`, `kk`, `uz`, `en`, `und`), смешения языков, спама/дубликатов и извлечение фактов (никнеймы, сервер, вложения, правила).
-- `app/generator.py` & `app/safety.py` — Генератор черновиков на языке игрока (с опциональным подключением LLM и автоматическим fallback) + защитный фильтр `SafetyGuard`.
-- `app/static/index.html` — Тёмная панель оператора поддержки на русском языке со всеми 9 разделами.
-- `tests/test_triage.py` — Полный набор автотестов по всем 9 обязательным сценариям.
-- `REPORT.md` — Отчёт с метриками, стоимостью и задержкой.
-
+- `app/main.py` — FastAPI-сервис (`POST /triage`, `GET /health`, статика панели оператора).
+- `app/triage.py` — Оркестратор триажа, логика `needs_human` и сбор метрик.
+- `app/rag.py` — Индексация 11 разделов `rules.json`, поиск (BM25 + n-grams + RP-словарь) и валидация `rule_ids`.
+- `app/classifier.py` — Загрузчик `taxonomy.json` и ML-классификатор категорий/приоритетов (`models/classifier_weights.json`).
+- `app/extractor.py` — Детекция языка (`ru`, `kk`, `uz`, `en`, `und`), сущностей (ники, сервер, /time, улики), спама и дубликатов.
+- `app/generator.py` & `app/safety.py` — Генератор черновиков на языке игрока + защитный фильтр `SafetyGuard`.
+- `app/workspace.py` — Роли Junior Admin и Senior Admin, жизненный цикл тикетов, передача и история действий.
+- `app/static/index.html` — Веб-панель оператора поддержки с переключателем Demo Mode, уведомлениями и фильтрами.
+- `tests/test_triage.py` — 17 автоматических интеграционных тестов по всем сценариям.
+- `REPORT.md` — Отчёт с измеренными метриками, латентностью, стоимостью и примерами черновиков.
