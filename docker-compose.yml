@@ -9,3 +9,4 @@ services:
     environment:
       - PYTHONIOENCODING=utf-8
     restart: unless-stopped
+
