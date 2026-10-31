@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  copilot:
+    build: .
+    container_name: grand-mobile-copilot
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONIOENCODING=utf-8
+    restart: unless-stopped
